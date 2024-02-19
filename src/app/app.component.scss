@@ -1,0 +1,18 @@
+.slider {
+    width: 80%;
+    height: 10px;
+    background-color: #ddd;
+    position: relative;
+    user-select: none;
+    margin-top: 20px;
+  }
+  
+  .thumb {
+    width: 20px;
+    height: 20px;
+    background-color: blue;
+    position: absolute;
+    top: -5px;
+    cursor: pointer;
+    border-radius: 50%;
+  }
