@@ -1,0 +1,16 @@
+<div class="slider-container">
+    <!-- Slider simple -->
+    <div class="default-slider">
+      <input type="range" min="0" max="100" [(ngModel)]="singleValue" (ngModelChange)="updateSingleValue($event)">
+      <span class="slider-value">{{ singleValue }} €</span>
+    </div>
+   <div style="height: 50px;"></div>
+    <!-- Slider de plage -->
+    <div class="range-slider">
+      <input type="range" class="range-min" [(ngModel)]="minValue" (ngModelChange)="updateRangeValues(minValue, maxValue)" min="0" max="maxValue" [value]="minValue">
+      <input type="range" class="range-max" [(ngModel)]="maxValue" (ngModelChange)="updateRangeValues(minValue, maxValue)" min="minValue" max="100" [value]="maxValue">
+      <div class="range-highlight" [style.left]="minValue + '%'" [style.width]="(maxValue - minValue) + '%'"></div>
+      <span class="slider-value min">{{ minValue }} €</span>
+      <span class="slider-value max">{{ maxValue }} €</span>
+    </div>
+  </div>

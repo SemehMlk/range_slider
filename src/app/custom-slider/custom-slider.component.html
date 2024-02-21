@@ -1,0 +1,23 @@
+
+<!--<div slider id="slider-distance">
+    <div>
+        <div inverse-left ></div>
+        <div inverse-right></div>
+        <div range ></div>
+        <span thumb></span>
+        <span thumb></span>
+    </div>
+    <input #leftSlider type="range" value="0" max="100" min="0" step="2" (input)="updateLeftSlider()" />
+    <input #rightSlider type="range" value="90" max="100" min="0" step="2" (input)="updateRightSlider()" />
+</div>-->
+<div slider id="slider-distance" #sliderBar>
+    <div>
+        <div inverse-left style="width:70%;" *ngIf="isRange"></div>
+        <div inverse-right style="width:70%;" *ngIf="isRange"></div>
+        <div range style="left:0%; right:0%;" *ngIf="isRange"></div>
+        <span thumb style="left:0%;" *ngIf="isRange"></span>
+        <span thumb style="left:100%;" *ngIf="isRange"></span>
+    </div>
+    <input *ngIf="isRange" #leftSlider type="range" value="0" max="100" min="0" step="1" (input)="updateLeftSlider()" />
+    <input #rightSlider type="range" value="100" max="100" min="0" step="1" (input)="isRange ? updateRightSlider() : updateVisuals()" />
+</div>
