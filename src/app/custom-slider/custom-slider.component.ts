@@ -1,9 +1,11 @@
-import { AfterViewInit, Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ContentChildren, ElementRef, QueryList, Renderer2, ViewChild, ViewEncapsulation } from '@angular/core';
+import { LnscSliderRangeThumbDirective } from './directives/start.directive';
 
 @Component({
   selector: 'app-custom-slider',
   templateUrl: './custom-slider.component.html',
-  styleUrls: ['./custom-slider.component.scss']
+  styleUrls: ['./custom-slider.component.scss'],
+  encapsulation: ViewEncapsulation.ShadowDom
 })
 export class CustomSliderComponent implements AfterViewInit {
 
@@ -11,13 +13,17 @@ export class CustomSliderComponent implements AfterViewInit {
   @ViewChild('leftSlider', { static: false }) leftSlider?: ElementRef<HTMLInputElement>;
   @ViewChild('rightSlider', { static: false }) rightSlider?: ElementRef<HTMLInputElement>;
 
+  //@ContentChildren(LnscSliderRangeThumbDirective, { read: ElementRef }) inputs!: QueryList<ElementRef>;
+  @ContentChildren(LnscSliderRangeThumbDirective) thumbs!: QueryList<LnscSliderRangeThumbDirective>;
+
+
   // Ajoutez des indicateurs pour gérer le mode du slider (simple ou range)
   isRange: boolean = true; // Déterminez ce flag en fonction de la logique de votre application
 
   constructor(private renderer: Renderer2) { }
 
   ngAfterViewInit(): void {
-    this.updateVisuals();
+    //this.updateVisuals();
   }
 
   updateLeftSlider(): void {
@@ -79,6 +85,47 @@ export class CustomSliderComponent implements AfterViewInit {
 
       this.renderer.setStyle(inverseLeftElement, 'width', `${leftPercentage}%`);
       this.renderer.setStyle(inverseRightElement, 'width', `${100 - rightPercentage}%`);
+    }
+  }
+
+  updateVisuals2(sliderValue : any): void {
+    
+    // S'assurer que tous les éléments nécessaires sont définis
+    //if (!this.leftSlider || !this.rightSlider || !this.sliderBar) return;
+
+    const myValue = parseInt(sliderValue);
+    const percentValue = (myValue / 100) * 100;
+
+    if (!this.isRange) {
+      // Logique spécifique au slider simple
+      const value = sliderValue;
+      const maxValue = 100;
+    
+      const percentage = (value / maxValue) * 100;
+    
+      // Supposant que tu as un élément visuel pour représenter la barre de progression du slider simple
+      const singleRangeElement = this.sliderBar.nativeElement.querySelector('[single-range]');
+      if (singleRangeElement) {
+        this.renderer.setStyle(singleRangeElement, 'width', `${percentage}%`);
+      }
+    }
+  
+    // Sélectionner directement les éléments visuels pour la mise à jour
+    const rangeElement = this.sliderBar.nativeElement.querySelector('[range]');
+    const leftThumbElement = this.sliderBar.nativeElement.querySelector('[thumb]');
+    const rightThumbElement = this.sliderBar.nativeElement.querySelector('[thumb]:last-child');
+
+    const inverseLeftElement = this.sliderBar.nativeElement.querySelector('[inverse-left]');
+    const inverseRightElement = this.sliderBar.nativeElement.querySelector('[inverse-right]');
+
+    if (rangeElement  && rightThumbElement && inverseLeftElement && inverseRightElement) {
+      this.renderer.setStyle(rangeElement, 'left', `${percentValue}%`);
+
+      this.renderer.setStyle(leftThumbElement, 'left', `${percentValue}%`);
+
+      
+      this.renderer.setStyle(inverseLeftElement, 'width', `${percentValue}%`);
+
     }
   }
 }

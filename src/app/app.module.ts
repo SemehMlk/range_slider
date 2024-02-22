@@ -10,8 +10,7 @@ import { CustomSliderComponent } from './custom-slider/custom-slider.component';
 import { RangeSliderComponent } from './range-slider/range-slider.component';
 import { FormsModule } from '@angular/forms';
 import { LnscSliderComponent } from './lnsc-slider/lnsc-slider.component';
-import { LnscSliderThumbDirective } from './lnsc-slider/lnsc-slider-thumb.directive';
-import { LnscSliderRangeThumbDirective } from './lnsc-slider/lnsc-slider-ragne-thumb.directive';
+import { LnscSliderRangeThumbDirective } from './custom-slider/directives/start.directive';
 
 @NgModule({
   declarations: [
@@ -22,7 +21,6 @@ import { LnscSliderRangeThumbDirective } from './lnsc-slider/lnsc-slider-ragne-t
     CustomSliderComponent,
     RangeSliderComponent,
     LnscSliderComponent,
-    LnscSliderThumbDirective,
     LnscSliderRangeThumbDirective
   ],
   imports: [

@@ -1,6 +1,4 @@
 import { AfterContentInit, AfterViewInit, Component, ContentChild, ContentChildren, ElementRef, Input, OnInit, QueryList, Renderer2, ViewChild } from '@angular/core';
-import { LnscSliderRangeThumbDirective } from './lnsc-slider-ragne-thumb.directive';
-import { LnscSliderThumbDirective } from './lnsc-slider-thumb.directive';
 import { ControlValueAccessor, FormControl, FormGroup, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
