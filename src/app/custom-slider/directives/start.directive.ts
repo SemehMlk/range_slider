@@ -20,7 +20,7 @@ export class LnscSliderRangeThumbDirective implements OnInit {
   
   @HostListener('input', ['$event.target.value'])
   onInput(value: never) {
-    this.slider.updateVisuals2(value)
+    //this.slider.updateVisuals2(value)
 
     // Mettre à jour la valeur du FormControl associé dans le composant de slider
     if (this.lnscSliderStartThumb) {

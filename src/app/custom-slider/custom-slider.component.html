@@ -1,4 +1,3 @@
-
 <!--<div slider id="slider-distance">
     <div>
         <div inverse-left ></div>
@@ -10,15 +9,22 @@
     <input #leftSlider type="range" value="0" max="100" min="0" step="2" (input)="updateLeftSlider()" />
     <input #rightSlider type="range" value="90" max="100" min="0" step="2" (input)="updateRightSlider()" />
 </div>-->
-<div slider id="slider-distance" #sliderBar>
+<div *ngIf="isRange" slider id="slider-container" #sliderBar>
     <div>
-        <div inverse-left style="width:70%;" *ngIf="isRange"></div>
-        <div inverse-right style="width:70%;" *ngIf="isRange"></div>
-        <div range style="left:0%; right:0%;" *ngIf="isRange"></div>
-        <span thumb style="left:0%;" *ngIf="isRange"></span>
-        <span thumb style="left:100%;" *ngIf="isRange"></span>
+        <div inverse-left></div>
+        <div inverse-right></div>
+        <div range style="left:0%; right:0%;"></div>
+        <span thumb style="left:0%;"></span>
+        <span thumb style="left:100%;"></span>
     </div>
-    <!--<input *ngIf="isRange" #leftSlider type="range" value="0" max="100" min="0" step="1" (input)="updateLeftSlider()" />
-    <input #rightSlider type="range" value="100" max="100" min="0" step="1" (input)="isRange ? updateRightSlider() : updateVisuals()" />-->
-    <ng-content></ng-content>
+    <input #leftSlider type="range" value="0" max="100" min="0" step="1" (input)="updateLeftSlider()" />
+    <input #rightSlider type="range" value="100" max="100" min="0" step="1" (input)="updateRightSlider()" />
+</div>
+
+<div *ngIf="!isRange" slider id="slider-container" #sliderBar>
+    <div class="slider-track">
+        <div class="inverse-right" style="width:0%;"></div>
+        <span thumb style="left:0%;"></span>
+    </div>
+    <input #singleSlider type="range" min="0" max="100" step="1" (input)="updateSingleSlider()" />
 </div>
