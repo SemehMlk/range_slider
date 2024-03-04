@@ -12,6 +12,25 @@ describe('ThumbService', () => {
   const mockRenderer2: Renderer2 = {
     setStyle: jest.fn(),
     // Add other Renderer2 methods if needed
+    createElement: jest.fn(),
+    createComment: jest.fn(),
+    createText: jest.fn(),
+    destroy: jest.fn(),
+    listen: jest.fn(),
+    removeAttribute: jest.fn(),
+    removeChild: jest.fn(),
+    selectRootElement: jest.fn(),
+    setAttribute: jest.fn(),
+    addClass: jest.fn(),
+    removeClass: jest.fn(),
+    setData: jest.fn(),
+    setProperty: jest.fn(),
+    setValue: jest.fn(),
+    appendChild: jest.fn(),
+    insertBefore: jest.fn(),
+    parentNode: jest.fn(),
+    nextSibling: jest.fn(),
+    querySelector: jest.fn()
   };
 
   const createService = createServiceFactory({
