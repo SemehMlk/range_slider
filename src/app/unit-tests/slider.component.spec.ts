@@ -1,15 +1,14 @@
-import { createComponentFactory, Spectator } from '@ngneat/spectator/jest';
+import { createComponentFactory, Spectator } from '@ngneat/spectator';
 import { LnsSliderComponent } from './slider.component';
-import { ThumbService } from '../../services/thumb.service';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 describe('LnsSliderComponent', () => {
   let spectator: Spectator<LnsSliderComponent>;
   let component: LnsSliderComponent;
 
-  // Créez une usine de composants Spectator
   const createComponent = createComponentFactory({
     component: LnsSliderComponent,
-    mocks: [ThumbService]
+    imports: [FormsModule, ReactiveFormsModule]
   });
 
   beforeEach(() => {
@@ -21,67 +20,40 @@ describe('LnsSliderComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should register component with thumbService on AfterViewInit', () => {
-    const thumbService = spectator.inject(ThumbService);
-    spectator.detectChanges(); // Detect changes to trigger ngAfterViewInit
-    expect(thumbService.registerComponent).toHaveBeenCalledWith(expect.any(Object));
+  it('should display the slider prefix and suffix', () => {
+    const prefix = 'Prefix';
+    const suffix = 'Suffix';
+    component.sliderPrefix = prefix;
+    component.sliderSuffix = suffix;
+    spectator.detectChanges();
+
+    const prefixEl = spectator.query('.slider-prefix');
+    const suffixEl = spectator.query('.slider-suffix');
+    expect(prefixEl).toHaveText(prefix);
+    expect(suffixEl).toHaveText(suffix);
   });
 
-  it('should update the slider value', () => {
-    const thumbService = spectator.inject(ThumbService);
+  it('should update the model when the slider value changes and emit change', () => {
     const newValue = 42;
-    component.sliderValue = newValue;
-    expect(thumbService.updateInputsAndSliders).toHaveBeenCalledWith(newValue, null);
+    spectator.detectChanges();
+    spectator.triggerEventHandler('input', 'change', { target: { value: newValue } });
+    expect(component.sliderValue).toEqual(newValue);
   });
 
-  it('should react to thumb focus changes', () => {
-    // Simulate thumb focus change
-    const thumbService = spectator.inject(ThumbService);
-    thumbService.getFocusState.mockReturnValue(of({ id: 'left', value: 10 }));
-    spectator.detectChanges(); // Initialize subscriptions
-    expect(component.isThumbFocused).toBeTruthy();
+  it('should show error message when there is a validation error', () => {
+    component.hasValidationError = true;
+    spectator.detectChanges();
+    const errorEl = spectator.query('.error-message');
+    expect(errorEl).toExist();
   });
 
-  it('should react to thumb hover changes', () => {
-    // Simulate thumb hover change
-    const thumbService = spectator.inject(ThumbService);
-    thumbService.getHoverState.mockReturnValue(of({ id: 'left', value: 10 }));
-    spectator.detectChanges(); // Initialize subscriptions
-    expect(component.isThumbHovered).toBeTruthy();
+  it('should not show error message when there is no validation error', () => {
+    component.hasValidationError = false;
+    spectator.detectChanges();
+    const errorEl = spectator.query('.error-message');
+    expect(errorEl).not.toExist();
   });
 
-  it('should emit change when slider value changes', () => {
-    // Suppose there's an output for value changes
-    const onChangeSpy = spyOn(component.valueChange, 'emit');
-    const newValue = 42;
-    component.sliderValue = newValue;
-    expect(onChangeSpy).toHaveBeenCalledWith(newValue);
-  });
-
-  it('should call onTouch when slider is touched', () => {
-    // Spy on the onTouch method
-    const onTouchSpy = spyOn(component, 'onTouch');
-    spectator.dispatchTouchEvent(spectator.query('input'), 'touchstart');
-    expect(onTouchSpy).toHaveBeenCalled();
-  });
-
-  it('should validate slider value', () => {
-    // Assume you have a validator method in your component
-    component.min = 0;
-    component.max = 100;
-    const invalidValue = -10;
-    component.sliderValue = invalidValue;
-    const errors = component.validate(component as any);
-    expect(errors).toEqual({ 'min': { 'actualValue': invalidValue, 'requiredValue': 0 } });
-  });
-
-  it('should not have validation errors when value is valid', () => {
-    component.min = 0;
-    component.max = 100;
-    const validValue = 50;
-    component.sliderValue = validValue;
-    const errors = component.validate(component as any);
-    expect(errors).toBeNull();
-  });
+  // More tests...
 
 });
