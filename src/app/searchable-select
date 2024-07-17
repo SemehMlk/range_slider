@@ -1,0 +1,82 @@
+import { Component, Input, OnInit, ViewChild, forwardRef } from '@angular/core';
+import { FormControl, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
+import { Observable } from 'rxjs';
+import { startWith, map } from 'rxjs/operators';
+
+@Component({
+  selector: 'app-searchable-multiselect',
+  templateUrl: './searchable-multiselect.component.html',
+  styleUrls: ['./searchable-multiselect.component.css'],
+  providers: [{
+    provide: NG_VALUE_ACCESSOR,
+    useExisting: forwardRef(() => SearchableMultiselectComponent),
+    multi: true
+  }]
+})
+export class SearchableMultiselectComponent implements OnInit, ControlValueAccessor {
+  @Input() options: string[] = [];
+  @Input() placeholder: string = 'Select';
+
+  selectFormControl = new FormControl();
+  searchTextboxControl = new FormControl();
+  filteredOptions: Observable<string[]>;
+
+  @ViewChild('search', { static: true }) search: any;
+
+  onChange = (value: any) => {};
+  onTouched = () => {};
+
+  ngOnInit() {
+    this.filteredOptions = this.searchTextboxControl.valueChanges.pipe(
+      startWith(''),
+      map(searchText => searchText ? this._filter(searchText) : this.options.slice())
+    );
+
+    this.selectFormControl.valueChanges.subscribe(value => {
+      this.onChange(value);
+      this.onTouched();
+    });
+  }
+
+  private _filter(value: string): string[] {
+    const filterValue = value.toLowerCase();
+    return this.options.filter(option => option.toLowerCase().includes(filterValue));
+  }
+
+  clearSearch(event: Event) {
+    event.stopPropagation();
+    this.searchTextboxControl.setValue('');
+  }
+
+  openedChange(opened: boolean) {
+    if (opened) {
+      this.search.nativeElement.focus();
+    } else {
+      this.searchTextboxControl.setValue('');
+    }
+  }
+
+  selectionChange(event: any) {
+    if (event.isUserInput && event.source.selected) {
+      const currentValue = this.selectFormControl.value || [];
+      this.selectFormControl.setValue([...currentValue, event.source.value]);
+    }
+  }
+
+  // ControlValueAccessor methods
+  writeValue(value: any): void {
+    this.selectFormControl.setValue(value);
+  }
+
+  registerOnChange(fn: any): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: any): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState?(isDisabled: boolean): void {
+    isDisabled ? this.selectFormControl.disable() : this.selectFormControl.enable();
+  }
+}
