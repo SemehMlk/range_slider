@@ -1,37 +1,28 @@
+import org.springframework.http.HttpStatus;
+
 import java.util.List;
 
-public class TestUtils {
+public class InvalidRequestException extends RuntimeException {
+    private String code;
+    private List<ErrorObject> errors;
+    private HttpStatus status;
 
-    public static ApiSearchCriteria createInOptionsCriteria(String field, List<String> options) {
-        ApiSearchCriteria criteria = new ApiSearchCriteria();
-        criteria.setField(field);
-        criteria.setFieldType("ENUM");
-        criteria.setCriteriaType("IN_OPTIONS");
-        criteria.setOptionsType(field.toUpperCase());
-        criteria.setSearchField(new SearchField().fieldType("ENUM").field(field.toUpperCase()).options(options));
-        return criteria;
+    public InvalidRequestException(String code, List<ErrorObject> errors, HttpStatus status) {
+        super(errors.toString());
+        this.code = code;
+        this.errors = errors;
+        this.status = status;
     }
 
-    public static ApiSearchCriteria createDateTimeRangeCriteria(String field, String minDate, String maxDate) {
-        ApiSearchCriteria criteria = new ApiSearchCriteria();
-        criteria.setField(field);
-        criteria.setFieldType("DATETIME");
-        criteria.setCriteriaType("DATE_TIME_RANGE");
-        criteria.setSearchField(new SearchField().fieldType("DATETIME").field(field.toUpperCase()));
-        criteria.setMinDate(minDate);
-        criteria.setMaxDate(maxDate);
-        return criteria;
+    public String getCode() {
+        return code;
     }
 
-    public static ApiSearchCriteria createContainsCriteria(String field, String searchText) {
-        ApiSearchCriteria criteria = new ApiSearchCriteria();
-        criteria.setField(field);
-        criteria.setFieldType("TEXT");
-        criteria.setCriteriaType("CONTAINS");
-        criteria.setSearchField(new SearchField().fieldType("TEXT").field(field.toUpperCase()));
-        criteria.setSearchText(searchText);
-        return criteria;
+    public List<ErrorObject> getErrors() {
+        return errors;
     }
 
-    // Ajoutez d'autres méthodes utilitaires pour d'autres types de critères si nécessaire
+    public HttpStatus getStatus() {
+        return status;
+    }
 }
