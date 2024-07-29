@@ -1,16 +1,101 @@
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.MockitoAnnotations;
+import org.springframework.data.jpa.domain.Specification;
 
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Path;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+
+public class MessageSpecificationBuilderTest {
+
+    @InjectMocks
+    private MessageSpecificationBuilder messageSpecificationBuilder;
+
+    @BeforeEach
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    public void createInOptionsSpecification_ShouldReturnCorrectSpecification() {
+        ApiInOptionsCriteriaDto criteria = new ApiInOptionsCriteriaDto();
+        criteria.setSearchField(new SearchField().field("translation_status").fieldType("ENUM"));
+        criteria.setOptions(List.of("TRANSLATED", "PARTIALLY_TRANSLATED"));
+        criteria.setNegated(false);
+
+        Specification<Message> spec = MessageSpecificationBuilder.createInOptionsSpecification(criteria);
+
+        assertThat(spec).isNotNull();
+
+        // Mocking the necessary objects
         CriteriaBuilder cb = mock(CriteriaBuilder.class);
         CriteriaQuery<Message> cq = mock(CriteriaQuery.class);
         Root<Message> root = mock(Root.class);
         Path<String> path = mock(Path.class);
         CriteriaBuilder.In<String> inClause = mock(CriteriaBuilder.In.class);
 
-        // Ensure that the mock returns the correct type
+        // Simulate the behavior of root.get and cb.in
         when(root.get(anyString())).thenReturn(path);
         when(cb.in(path)).thenReturn(inClause);
+        when(inClause.value(anyString())).thenReturn(inClause);
 
-        spec.toPredicate(root, cq, cb);
+        // Call the method under test
+        Predicate predicate = spec.toPredicate(root, cq, cb);
 
+        // Verify interactions and state
+        verify(root).get("translation_status");
         verify(cb).in(path);
         verify(inClause).value("TRANSLATED");
         verify(inClause).value("PARTIALLY_TRANSLATED");
+
+        assertThat(predicate).isEqualTo(inClause);
+    }
+
+    @Test
+    public void createInOptionsSpecification_ShouldReturnCorrectSpecification_WhenNegated() {
+        ApiInOptionsCriteriaDto criteria = new ApiInOptionsCriteriaDto();
+        criteria.setSearchField(new SearchField().field("translation_status").fieldType("ENUM"));
+        criteria.setOptions(List.of("TRANSLATED", "PARTIALLY_TRANSLATED"));
+        criteria.setNegated(true);
+
+        Specification<Message> spec = MessageSpecificationBuilder.createInOptionsSpecification(criteria);
+
+        assertThat(spec).isNotNull();
+
+        // Mocking the necessary objects
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        CriteriaQuery<Message> cq = mock(CriteriaQuery.class);
+        Root<Message> root = mock(Root.class);
+        Path<String> path = mock(Path.class);
+        CriteriaBuilder.In<String> inClause = mock(CriteriaBuilder.In.class);
+        Predicate notPredicate = mock(Predicate.class);
+
+        // Simulate the behavior of root.get, cb.in, and cb.not
+        when(root.get(anyString())).thenReturn(path);
+        when(cb.in(path)).thenReturn(inClause);
+        when(inClause.value(anyString())).thenReturn(inClause);
+        when(cb.not(inClause)).thenReturn(notPredicate);
+
+        // Call the method under test
+        Predicate predicate = spec.toPredicate(root, cq, cb);
+
+        // Verify interactions and state
+        verify(root).get("translation_status");
+        verify(cb).in(path);
+        verify(inClause).value("TRANSLATED");
+        verify(inClause).value("PARTIALLY_TRANSLATED");
+        verify(cb).not(inClause);
+
+        assertThat(predicate).isEqualTo(notPredicate);
+    }
+}
