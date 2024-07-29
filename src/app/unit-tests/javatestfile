@@ -1,28 +1,24 @@
-import org.springframework.http.HttpStatus;
+private List<ErrorObject> validateRequest(Integer pagenumber, Integer pagesize, String sortBy, String order, ApiSearchRequestDto apiSearchRequest) {
+        List<ErrorObject> errors = new ArrayList<>();
+        
+        // Example validation checks
+        if (pagenumber == null || pagenumber < 0) {
+            ErrorObject error = new ErrorObject();
+            error.setCode("INVALID_PAGE_NUMBER");
+            error.setMessage("Page number must be non-negative.");
+            error.setParameters(List.of(pagenumber != null ? pagenumber.toString() : "null"));
+            errors.add(error);
+        }
 
-import java.util.List;
+        if (pagesize == null || pagesize <= 0) {
+            ErrorObject error = new ErrorObject();
+            error.setCode("INVALID_PAGE_SIZE");
+            error.setMessage("Page size must be greater than zero.");
+            error.setParameters(List.of(pagesize != null ? pagesize.toString() : "null"));
+            errors.add(error);
+        }
 
-public class InvalidRequestException extends RuntimeException {
-    private String code;
-    private List<ErrorObject> errors;
-    private HttpStatus status;
+        // Add more validation checks as necessary
 
-    public InvalidRequestException(String code, List<ErrorObject> errors, HttpStatus status) {
-        super(errors.toString());
-        this.code = code;
-        this.errors = errors;
-        this.status = status;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public List<ErrorObject> getErrors() {
         return errors;
     }
-
-    public HttpStatus getStatus() {
-        return status;
-    }
-}
