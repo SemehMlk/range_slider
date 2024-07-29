@@ -1,110 +1,37 @@
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.ResponseEntity;
-
-import java.util.Collections;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+public class TestUtils {
 
-public class MessagesServiceTest {
-
-    @Mock
-    private CanonicalMessageRepository canonicalMessageRepository;
-
-    @Mock
-    private MessageMapper messageMapper;
-
-    @Mock
-    private MessageSpecificationBuilder messageSpecificationBuilder;
-
-    @InjectMocks
-    private MessagesService messagesService;
-
-    @BeforeEach
-    public void setUp() {
-        MockitoAnnotations.openMocks(this);
+    public static ApiSearchCriteria createInOptionsCriteria(String field, List<String> options) {
+        ApiSearchCriteria criteria = new ApiSearchCriteria();
+        criteria.setField(field);
+        criteria.setFieldType("ENUM");
+        criteria.setCriteriaType("IN_OPTIONS");
+        criteria.setOptionsType(field.toUpperCase());
+        criteria.setSearchField(new SearchField().fieldType("ENUM").field(field.toUpperCase()).options(options));
+        return criteria;
     }
 
-    @Test
-    public void getAllMessages_ShouldReturnMessages() {
-        int pageNumber = 0;
-        int pageSize = 10;
-        String sortBy = "id";
-        String order = "asc";
-        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
-
-        Specification<KemmCanonicalMessage> spec = (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
-        Sort.Direction direction = Sort.Direction.fromString(order);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(direction, sortBy));
-
-        KemmCanonicalMessage message = new KemmCanonicalMessage();
-        Page<KemmCanonicalMessage> messagePage = new PageImpl<>(Collections.singletonList(message));
-
-        when(messageSpecificationBuilder.buildSpecification(any(ApiSearchRequestDto.class))).thenReturn(spec);
-        when(canonicalMessageRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(messagePage);
-        when(messageMapper.toDto(any(KemmCanonicalMessage.class))).thenReturn(new MessagesPageDto.MessageDto());
-
-        ResponseEntity<MessagesPageDto> response = messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
-
-        assertThat(response).isNotNull();
-        assertThat(response.getStatusCodeValue()).isEqualTo(200);
-        MessagesPageDto body = response.getBody();
-        assertThat(body).isNotNull();
-        assertThat(body.getElements()).hasSize(1);
-        assertThat(body.getTotalElements()).isEqualTo(1);
-        assertThat(body.getCurrentPageNumber()).isEqualTo(pageNumber);
-        assertThat(body.getCurrentPageSize()).isEqualTo(pageSize);
-        assertThat(body.getTotalPages()).isEqualTo(1);
-
-        verify(messageSpecificationBuilder).buildSpecification(apiSearchRequest);
-        verify(canonicalMessageRepository).findAll(spec, pageable);
-        verify(messageMapper).toDto(message);
+    public static ApiSearchCriteria createDateTimeRangeCriteria(String field, String minDate, String maxDate) {
+        ApiSearchCriteria criteria = new ApiSearchCriteria();
+        criteria.setField(field);
+        criteria.setFieldType("DATETIME");
+        criteria.setCriteriaType("DATE_TIME_RANGE");
+        criteria.setSearchField(new SearchField().fieldType("DATETIME").field(field.toUpperCase()));
+        criteria.setMinDate(minDate);
+        criteria.setMaxDate(maxDate);
+        return criteria;
     }
 
-    @Test
-    public void getAllMessages_ShouldReturnEmptyPage_WhenNoMessagesFound() {
-        int pageNumber = 0;
-        int pageSize = 10;
-        String sortBy = "id";
-        String order = "asc";
-        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
-
-        Specification<KemmCanonicalMessage> spec = (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
-        Sort.Direction direction = Sort.Direction.fromString(order);
-        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(direction, sortBy));
-
-        Page<KemmCanonicalMessage> messagePage = new PageImpl<>(Collections.emptyList());
-
-        when(messageSpecificationBuilder.buildSpecification(any(ApiSearchRequestDto.class))).thenReturn(spec);
-        when(canonicalMessageRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(messagePage);
-
-        ResponseEntity<MessagesPageDto> response = messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
-
-        assertThat(response).isNotNull();
-        assertThat(response.getStatusCodeValue()).isEqualTo(200);
-        MessagesPageDto body = response.getBody();
-        assertThat(body).isNotNull();
-        assertThat(body.getElements()).isEmpty();
-        assertThat(body.getTotalElements()).isEqualTo(0);
-        assertThat(body.getCurrentPageNumber()).isEqualTo(pageNumber);
-        assertThat(body.getCurrentPageSize()).isEqualTo(pageSize);
-        assertThat(body.getTotalPages()).isEqualTo(0);
-
-        verify(messageSpecificationBuilder).buildSpecification(apiSearchRequest);
-        verify(canonicalMessageRepository).findAll(spec, pageable);
-        verify(messageMapper, never()).toDto(any(KemmCanonicalMessage.class));
+    public static ApiSearchCriteria createContainsCriteria(String field, String searchText) {
+        ApiSearchCriteria criteria = new ApiSearchCriteria();
+        criteria.setField(field);
+        criteria.setFieldType("TEXT");
+        criteria.setCriteriaType("CONTAINS");
+        criteria.setSearchField(new SearchField().fieldType("TEXT").field(field.toUpperCase()));
+        criteria.setSearchText(searchText);
+        return criteria;
     }
+
+    // Ajoutez d'autres méthodes utilitaires pour d'autres types de critères si nécessaire
 }
