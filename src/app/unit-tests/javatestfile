@@ -1,0 +1,14 @@
+CriteriaBuilder cb = mock(CriteriaBuilder.class);
+        CriteriaQuery<Message> cq = mock(CriteriaQuery.class);
+        Root<Message> root = mock(Root.class);
+        Path<String> path = mock(Path.class);
+        CriteriaBuilder.In<String> inClause = mock(CriteriaBuilder.In.class);
+
+        when(root.get("translationStatus")).thenReturn(path);
+        when(cb.in(path)).thenReturn(inClause);
+
+        spec.toPredicate(root, cq, cb);
+
+        verify(cb).in(path);
+        verify(inClause).value("TRANSLATED");
+        verify(inClause).value("PARTIALLY_TRANSLATED");
