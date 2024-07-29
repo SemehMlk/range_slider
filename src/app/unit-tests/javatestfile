@@ -1,9 +1,11 @@
-      CriteriaBuilder cb = mock(CriteriaBuilder.class);
+
+        CriteriaBuilder cb = mock(CriteriaBuilder.class);
         CriteriaQuery<Message> cq = mock(CriteriaQuery.class);
         Root<Message> root = mock(Root.class);
         Path<String> path = mock(Path.class);
         CriteriaBuilder.In<String> inClause = mock(CriteriaBuilder.In.class);
 
+        // Ensure that the mock returns the correct type
         when(root.get(anyString())).thenReturn(path);
         when(cb.in(path)).thenReturn(inClause);
 
