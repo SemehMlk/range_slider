@@ -1,24 +1,108 @@
-private List<ErrorObject> validateRequest(Integer pagenumber, Integer pagesize, String sortBy, String order, ApiSearchRequestDto apiSearchRequest) {
-        List<ErrorObject> errors = new ArrayList<>();
-        
-        // Example validation checks
-        if (pagenumber == null || pagenumber < 0) {
-            ErrorObject error = new ErrorObject();
-            error.setCode("INVALID_PAGE_NUMBER");
-            error.setMessage("Page number must be non-negative.");
-            error.setParameters(List.of(pagenumber != null ? pagenumber.toString() : "null"));
-            errors.add(error);
-        }
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-        if (pagesize == null || pagesize <= 0) {
-            ErrorObject error = new ErrorObject();
-            error.setCode("INVALID_PAGE_SIZE");
-            error.setMessage("Page size must be greater than zero.");
-            error.setParameters(List.of(pagesize != null ? pagesize.toString() : "null"));
-            errors.add(error);
-        }
+import static org.assertj.core.api.Assertions.assertThat;
 
-        // Add more validation checks as necessary
+public class ApiFieldMapperTest {
 
-        return errors;
+    @BeforeAll
+    public static void setUp() {
+        // Any setup if needed
     }
+
+    @Test
+    public void testGetColumnName_Id() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.ID);
+        assertThat(columnName).isEqualTo("id");
+    }
+
+    @Test
+    public void testGetColumnName_Origin() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.ORIGIN);
+        assertThat(columnName).isEqualTo("origin");
+    }
+
+    @Test
+    public void testGetColumnName_Type() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.TYPE);
+        assertThat(columnName).isEqualTo("type");
+    }
+
+    @Test
+    public void testGetColumnName_Direction() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.DIRECTION);
+        assertThat(columnName).isEqualTo("direction");
+    }
+
+    @Test
+    public void testGetColumnName_TranslationStatus() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.TRANSLATION_STATUS);
+        assertThat(columnName).isEqualTo("translationStatus");
+    }
+
+    @Test
+    public void testGetColumnName_GlobalStatus() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.GLOBAL_STATUS);
+        assertThat(columnName).isEqualTo("globalStatus");
+    }
+
+    @Test
+    public void testGetColumnName_CreationDate() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.CREATION_DATE);
+        assertThat(columnName).isEqualTo("creationDate");
+    }
+
+    @Test
+    public void testGetColumnName_Amount() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.AMOUNT);
+        assertThat(columnName).isEqualTo("amount");
+    }
+
+    @Test
+    public void testGetColumnName_Currency() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.CURRENCY);
+        assertThat(columnName).isEqualTo("currency");
+    }
+
+    @Test
+    public void testGetColumnName_Trn() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.TRN);
+        assertThat(columnName).isEqualTo("trn");
+    }
+
+    @Test
+    public void testGetColumnName_Mur() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.MUR);
+        assertThat(columnName).isEqualTo("mur");
+    }
+
+    @Test
+    public void testGetColumnName_Uetr() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.UETR);
+        assertThat(columnName).isEqualTo("uetr");
+    }
+
+    @Test
+    public void testGetColumnName_ReceiverBic() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.RECEIVER_BIC);
+        assertThat(columnName).isEqualTo("receiverBic");
+    }
+
+    @Test
+    public void testGetColumnName_SenderBic() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.SENDER_BIC);
+        assertThat(columnName).isEqualTo("senderBic");
+    }
+
+    @Test
+    public void testGetColumnName_ValueDate() {
+        String columnName = ApiFieldMapper.getColumnName(ApiSearchableFieldDto.FieldEnum.VALUE_DATE);
+        assertThat(columnName).isEqualTo("valueDate");
+    }
+
+    @Test
+    public void testGetColumnName_UnknownField() {
+        String columnName = ApiFieldMapper.getColumnName(null);
+        assertThat(columnName).isNull();
+    }
+}
