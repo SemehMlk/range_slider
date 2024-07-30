@@ -1,8 +1,6 @@
 import org.junit.jupiter.api.Test;
-
 import java.util.Arrays;
 import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class SearchFieldConfigTest {
@@ -56,30 +54,21 @@ public class SearchFieldConfigTest {
 
     @Test
     public void testConstructorWithoutOptions() {
-        FieldEnum field = FieldEnum.CREATION_DATE;
-        FieldTypeEnum fieldType = FieldTypeEnum.DATETIME;
-        List<ApiConditionOperatorDto> operators = Arrays.asList(ApiConditionOperatorDto.EQUAL, ApiConditionOperatorDto.NOT_EQUAL);
+        SearchFieldConfig config = SearchFieldConfig.MESSAGE_CREATION_DATE;
 
-        SearchFieldConfig config = new SearchFieldConfig(field, fieldType, operators);
-
-        assertThat(config.getField()).isEqualTo(field);
-        assertThat(config.getFieldType()).isEqualTo(fieldType);
-        assertThat(config.getOperators()).isEqualTo(operators);
+        assertThat(config.getField()).isEqualTo(FieldEnum.CREATION_DATE);
+        assertThat(config.getFieldType()).isEqualTo(FieldTypeEnum.DATETIME);
+        assertThat(config.getOperators()).contains(ApiConditionOperatorDto.EQUAL, ApiConditionOperatorDto.NOT_EQUAL);
         assertThat(config.getOptions()).isNull();
     }
 
     @Test
     public void testConstructorWithOptions() {
-        FieldEnum field = FieldEnum.TRANSLATION_STATUS;
-        FieldTypeEnum fieldType = FieldTypeEnum.ENUM;
-        List<ApiConditionOperatorDto> operators = Arrays.asList(ApiConditionOperatorDto.IN, ApiConditionOperatorDto.NOT_IN);
-        List<String> options = Arrays.asList("TRANSLATED", "NOT_TRANSLATED");
+        SearchFieldConfig config = SearchFieldConfig.TRANSLATION_STATUS;
 
-        SearchFieldConfig config = new SearchFieldConfig(field, fieldType, operators, options);
-
-        assertThat(config.getField()).isEqualTo(field);
-        assertThat(config.getFieldType()).isEqualTo(fieldType);
-        assertThat(config.getOperators()).isEqualTo(operators);
-        assertThat(config.getOptions()).isEqualTo(options);
+        assertThat(config.getField()).isEqualTo(FieldEnum.TRANSLATION_STATUS);
+        assertThat(config.getFieldType()).isEqualTo(FieldTypeEnum.ENUM);
+        assertThat(config.getOperators()).contains(ApiConditionOperatorDto.IN, ApiConditionOperatorDto.NOT_IN);
+        assertThat(config.getOptions()).contains("TRANSLATED", "NOT_TRANSLATED");
     }
 }
