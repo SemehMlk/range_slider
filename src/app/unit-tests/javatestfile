@@ -3,6 +3,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.lang.reflect.Method;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
@@ -10,8 +12,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 public class MessageSpecificationBuilderTest {
 
@@ -42,7 +42,7 @@ public class MessageSpecificationBuilderTest {
         criteria.setCriteriaType("EQUAL_DATE");
         criteria.setSearchField(new ApiSearchableFieldDto());
         criteria.getSearchField().setField("CREATION_DATE");
-        criteria.setSearchDateValue(OffsetDateTime.now(ZoneOffset.UTC).toLocalDate());
+        criteria.setSearchDateValue(LocalDate.now());
 
         ApiSearchRequestDto request = new ApiSearchRequestDto();
         request.setCriteria(List.of(criteria));
@@ -54,64 +54,81 @@ public class MessageSpecificationBuilderTest {
     }
 
     @Test
-    public void createDateTimeRangeSpecification_ShouldReturnCorrectSpecification() {
+    public void createDateTimeRangeSpecification_ShouldReturnCorrectSpecification() throws Exception {
         ApiDateTimeRangeCriteriaDto criteria = new ApiDateTimeRangeCriteriaDto();
         criteria.setSearchField(new ApiSearchableFieldDto());
         criteria.getSearchField().setField("CREATION_DATE");
         criteria.setMinDate(OffsetDateTime.now(ZoneOffset.UTC));
         criteria.setMaxDate(OffsetDateTime.now(ZoneOffset.UTC).plusDays(1));
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createDateTimeRangeSpecification(criteria);
+        Method method = MessageSpecificationBuilder.class.getDeclaredMethod("createDateTimeRangeSpecification", ApiDateTimeRangeCriteriaDto.class);
+        method.setAccessible(true);
+
+        Specification<KemmCanonicalMessage> spec = (Specification<KemmCanonicalMessage>) method.invoke(null, criteria);
 
         assertThat(spec).isNotNull();
     }
 
     @Test
-    public void createEqualDateSpecification_ShouldReturnCorrectSpecification() {
+    public void createEqualDateSpecification_ShouldReturnCorrectSpecification() throws Exception {
         ApiEqualDateCriteriaDto criteria = new ApiEqualDateCriteriaDto();
         criteria.setSearchField(new ApiSearchableFieldDto());
         criteria.getSearchField().setField("CREATION_DATE");
-        criteria.setSearchDateValue(OffsetDateTime.now(ZoneOffset.UTC).toLocalDate());
+        criteria.setSearchDateValue(LocalDate.now());
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createEqualDateSpecification(criteria);
+        Method method = MessageSpecificationBuilder.class.getDeclaredMethod("createEqualDateSpecification", ApiEqualDateCriteriaDto.class);
+        method.setAccessible(true);
+
+        Specification<KemmCanonicalMessage> spec = (Specification<KemmCanonicalMessage>) method.invoke(null, criteria);
 
         assertThat(spec).isNotNull();
     }
 
     @Test
-    public void createInLastTimeLapseSpecification_ShouldReturnCorrectSpecification() {
+    public void createInLastTimeLapseSpecification_ShouldReturnCorrectSpecification() throws Exception {
         ApiInLastTimeLapseCriteriaDto criteria = new ApiInLastTimeLapseCriteriaDto();
         criteria.setSearchField(new ApiSearchableFieldDto());
         criteria.getSearchField().setField("CREATION_DATE");
         criteria.setTimeLapse(24);
         criteria.setTimeUnit(ApiTimeUnitDto.HOUR);
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createInLastTimeLapseSpecification(criteria);
+        Method method = MessageSpecificationBuilder.class.getDeclaredMethod("createInLastTimeLapseSpecification", ApiInLastTimeLapseCriteriaDto.class);
+        method.setAccessible(true);
+
+        Specification<KemmCanonicalMessage> spec = (Specification<KemmCanonicalMessage>) method.invoke(null, criteria);
 
         assertThat(spec).isNotNull();
     }
 
     @Test
-    public void createTextSpecification_ShouldReturnCorrectSpecification() {
+    public void createTextSpecification_ShouldReturnCorrectSpecification() throws Exception {
         ApiTextCriteriaDto criteria = new ApiTextCriteriaDto();
         criteria.setSearchField(new ApiSearchableFieldDto());
         criteria.getSearchField().setField("MESSAGE_CONTENT");
         criteria.setSearchText("test");
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createTextSpecification(criteria);
+        Method method = MessageSpecificationBuilder.class.getDeclaredMethod("createTextSpecification", ApiTextCriteriaDto.class);
+        method.setAccessible(true);
+
+        Specification<KemmCanonicalMessage> spec = (Specification<KemmCanonicalMessage>) method.invoke(null, criteria);
 
         assertThat(spec).isNotNull();
     }
 
     @Test
-    public void createRegexSpecification_ShouldReturnCorrectSpecification() {
+    public void createRegexSpecification_ShouldReturnCorrectSpecification() throws Exception {
         ApiRegexCriteriaDto criteria = new ApiRegexCriteriaDto();
         criteria.setSearchField(new ApiSearchableFieldDto());
         criteria.getSearchField().setField("MESSAGE_CONTENT");
         criteria.setSearchValue("test.*");
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createRegexSpecification(criteria);
+        Method method = MessageSpecificationBuilder.class.getDeclaredMethod("createRegexSpecification", ApiRegexCriteriaDto.class);
+        method.setAccessible(true);
+
+        Specification<KemmCanonicalMessage> spec = (Specification<KemmCanonicalMessage>) method.invoke(null, criteria);
 
         assertThat(spec).isNotNull();
     }
+
+    // Ajoutez d'autres tests pour les autres méthodes privées si nécessaire
 }
