@@ -1,25 +1,26 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
-import org.springframework.web.context.request.WebRequest;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
-import java.util.List;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
+import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
-@SpringBootTest
 public class MessageServiceTest {
 
     private MessageService messageService;
+    private Validator validator;
 
     @BeforeEach
     public void setUp() {
         messageService = new MessageService();
+        LocalValidatorFactoryBean factoryBean = new LocalValidatorFactoryBean();
+        factoryBean.afterPropertiesSet();
+        validator = factoryBean.getValidator();
     }
 
     @Test
@@ -27,14 +28,15 @@ public class MessageServiceTest {
         Integer invalidPageNumber = -1; // Invalid page number
         Integer validPageSize = 10; // Valid page size
 
-        Exception exception = assertThrows(MethodArgumentNotValidException.class, () -> {
-            messageService.getMessages(invalidPageNumber, validPageSize);
-        });
+        Set<ConstraintViolation<MessageService>> violations = validator.forExecutables().validateParameters(
+                messageService,
+                messageService.getClass().getMethod("getMessages", Integer.class, Integer.class),
+                new Object[]{invalidPageNumber, validPageSize}
+        );
 
-        String expectedMessage = "Page number should not be less than 0";
-        String actualMessage = exception.getMessage();
-
-        assertEquals(expectedMessage, actualMessage);
+        assertFalse(violations.isEmpty());
+        ConstraintViolation<MessageService> violation = violations.iterator().next();
+        assertEquals("Page number should not be less than 0", violation.getMessage());
     }
 
     @Test
@@ -42,13 +44,14 @@ public class MessageServiceTest {
         Integer validPageNumber = 0; // Valid page number
         Integer invalidPageSize = 0; // Invalid page size
 
-        Exception exception = assertThrows(MethodArgumentNotValidException.class, () -> {
-            messageService.getMessages(validPageNumber, invalidPageSize);
-        });
+        Set<ConstraintViolation<MessageService>> violations = validator.forExecutables().validateParameters(
+                messageService,
+                messageService.getClass().getMethod("getMessages", Integer.class, Integer.class),
+                new Object[]{validPageNumber, invalidPageSize}
+        );
 
-        String expectedMessage = "Page size should not be less than 1";
-        String actualMessage = exception.getMessage();
-
-        assertEquals(expectedMessage, actualMessage);
+        assertFalse(violations.isEmpty());
+        ConstraintViolation<MessageService> violation = violations.iterator().next();
+        assertEquals("Page size should not be less than 1", violation.getMessage());
     }
 }
