@@ -1,6 +1,6 @@
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ProblemDetail> handleConstraintViolationException(ConstraintViolationException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request parameters");
-        problemDetail.setProperty("violations", ex.getConstraintViolations());
+   @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ProblemDetail> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Missing required request parameter");
+        problemDetail.setProperty("parameter", ex.getParameterName());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
     }
