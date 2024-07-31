@@ -1,69 +1,46 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.Validator;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Set;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-public class MessagesServiceTest {
+@SpringBootTest
+public class MessagesServiceIntegrationTest {
 
-    private MessagesService messagesService;
-    private Validator validator;
+    @Autowired
+    private WebApplicationContext webApplicationContext;
+
+    private MockMvc mockMvc;
 
     @BeforeEach
     public void setUp() {
-        messagesService = new MessagesService();
-        LocalValidatorFactoryBean factoryBean = new LocalValidatorFactoryBean();
-        factoryBean.afterPropertiesSet();
-        validator = factoryBean.getValidator();
+        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
     }
 
     @Test
-    public void testGetAllMessagesInvalidPageNumber() {
-        Integer invalidPageNumber = -1; // Invalid page number
-        Integer validPageSize = 10; // Valid page size
-
-        // Manually validate the parameter
-        Set<ConstraintViolation<ParameterWrapper>> violations = validator.validate(new ParameterWrapper(invalidPageNumber, validPageSize));
-
-        assertFalse(violations.isEmpty(), "Violations should not be empty");
-        ConstraintViolation<ParameterWrapper> violation = violations.iterator().next();
-        assertEquals("Page number should not be less than 0", violation.getMessage());
+    public void testGetAllMessagesInvalidPageNumber() throws Exception {
+        mockMvc.perform(get("/path-to-your-api/messages")
+                .param("pagenumber", "-1")
+                .param("pagesize", "10")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0]").value("Page number should not be less than 0"));
     }
 
     @Test
-    public void testGetAllMessagesInvalidPageSize() {
-        Integer validPageNumber = 0; // Valid page number
-        Integer invalidPageSize = 0; // Invalid page size
-
-        // Manually validate the parameter
-        Set<ConstraintViolation<ParameterWrapper>> violations = validator.validate(new ParameterWrapper(validPageNumber, invalidPageSize));
-
-        assertFalse(violations.isEmpty(), "Violations should not be empty");
-        ConstraintViolation<ParameterWrapper> violation = violations.iterator().next();
-        assertEquals("Page size should not be less than 1", violation.getMessage());
-    }
-
-    // Wrapper class for parameters to be validated
-    private static class ParameterWrapper {
-        @NotNull
-        @Min(value = 0, message = "Page number should not be less than 0")
-        private Integer pagenumber;
-
-        @NotNull
-        @Min(value = 1, message = "Page size should not be less than 1")
-        private Integer pagesize;
-
-        public ParameterWrapper(Integer pagenumber, Integer pagesize) {
-            this.pagenumber = pagenumber;
-            this.pagesize = pagesize;
-        }
-
-        // Getters and setters, if needed
+    public void testGetAllMessagesInvalidPageSize() throws Exception {
+        mockMvc.perform(get("/path-to-your-api/messages")
+                .param("pagenumber", "0")
+                .param("pagesize", "0")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0]").value("Page size should not be less than 1"));
     }
 }
