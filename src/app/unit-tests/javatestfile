@@ -1,47 +1,69 @@
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validator;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Set;
+import static org.junit.jupiter.api.Assertions.*;
 
-@ControllerAdvice
-public class GlobalExceptionHandler {
+public class MessagesServiceTest {
 
-    @ExceptionHandler(ConstraintViolationException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
-    public ProblemDetail handleConstraintViolationException(ConstraintViolationException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setTitle("Validation Error");
-        problemDetail.setDetail("One or more fields have validation errors");
+    private MessagesService messagesService;
+    private Validator validator;
 
-        List<String> errorDetails = ex.getConstraintViolations().stream()
-                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
-                .collect(Collectors.toList());
-        problemDetail.setProperty("errors", errorDetails.toArray(new String[0]));
-
-        return problemDetail;
+    @BeforeEach
+    public void setUp() {
+        messagesService = new MessagesService();
+        LocalValidatorFactoryBean factoryBean = new LocalValidatorFactoryBean();
+        factoryBean.afterPropertiesSet();
+        validator = factoryBean.getValidator();
     }
 
-    @ExceptionHandler(MissingServletRequestParameterException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
-    public ProblemDetail handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setTitle("Missing Parameter");
-        problemDetail.setDetail("Required request parameter is missing");
+    @Test
+    public void testGetAllMessagesInvalidPageNumber() {
+        Integer invalidPageNumber = -1; // Invalid page number
+        Integer validPageSize = 10; // Valid page size
 
-        String errorDetail = ex.getParameterName() + ": " + ex.getMessage();
-        problemDetail.setProperty("errors", new String[]{errorDetail});
+        // Manually validate the parameter
+        Set<ConstraintViolation<ParameterWrapper>> violations = validator.validate(new ParameterWrapper(invalidPageNumber, validPageSize));
 
-        return problemDetail;
+        assertFalse(violations.isEmpty(), "Violations should not be empty");
+        ConstraintViolation<ParameterWrapper> violation = violations.iterator().next();
+        assertEquals("Page number should not be less than 0", violation.getMessage());
     }
 
-    // Vous pouvez ajouter d'autres gestionnaires d'exceptions ici si nécessaire
+    @Test
+    public void testGetAllMessagesInvalidPageSize() {
+        Integer validPageNumber = 0; // Valid page number
+        Integer invalidPageSize = 0; // Invalid page size
+
+        // Manually validate the parameter
+        Set<ConstraintViolation<ParameterWrapper>> violations = validator.validate(new ParameterWrapper(validPageNumber, invalidPageSize));
+
+        assertFalse(violations.isEmpty(), "Violations should not be empty");
+        ConstraintViolation<ParameterWrapper> violation = violations.iterator().next();
+        assertEquals("Page size should not be less than 1", violation.getMessage());
+    }
+
+    // Wrapper class for parameters to be validated
+    private static class ParameterWrapper {
+        @NotNull
+        @Min(value = 0, message = "Page number should not be less than 0")
+        private Integer pagenumber;
+
+        @NotNull
+        @Min(value = 1, message = "Page size should not be less than 1")
+        private Integer pagesize;
+
+        public ParameterWrapper(Integer pagenumber, Integer pagesize) {
+            this.pagenumber = pagenumber;
+            this.pagesize = pagesize;
+        }
+
+        // Getters and setters, if needed
+    }
 }
