@@ -1,64 +1,54 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.MockitoAnnotations;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.context.request.WebRequest;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.ConstraintViolationException;
-import java.util.Collections;
-import java.util.Set;
+import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowable;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class MessagesServiceTest {
+@SpringBootTest
+public class MessageServiceTest {
 
-    @InjectMocks
-    private MessagesService messagesService;
+    private MessageService messageService;
 
     @BeforeEach
     public void setUp() {
-        MockitoAnnotations.openMocks(this);
+        messageService = new MessageService();
     }
 
     @Test
-    public void getAllMessages_ShouldThrowMissingServletRequestParameterException_WhenPageNumberIsMissing() {
-        Integer pageNumber = null; // Paramètre manquant
-        Integer pageSize = 10;
-        String sortBy = "id";
-        String order = "asc";
-        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
+    public void testGetMessagesInvalidPageNumber() {
+        Integer invalidPageNumber = -1; // Invalid page number
+        Integer validPageSize = 10; // Valid page size
 
-        Throwable thrown = catchThrowable(() -> {
-            messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
+        Exception exception = assertThrows(MethodArgumentNotValidException.class, () -> {
+            messageService.getMessages(invalidPageNumber, validPageSize);
         });
 
-        assertThat(thrown).isInstanceOf(MissingServletRequestParameterException.class);
-        MissingServletRequestParameterException exception = (MissingServletRequestParameterException) thrown;
-        assertThat(exception.getParameterName()).isEqualTo("pagenumber");
+        String expectedMessage = "Page number should not be less than 0";
+        String actualMessage = exception.getMessage();
+
+        assertEquals(expectedMessage, actualMessage);
     }
 
     @Test
-    public void getAllMessages_ShouldThrowConstraintViolationException_WhenPageSizeIsInvalid() {
-        Integer pageNumber = 0;
-        Integer pageSize = 0; // Paramètre invalide
-        String sortBy = "id";
-        String order = "asc";
-        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
+    public void testGetMessagesInvalidPageSize() {
+        Integer validPageNumber = 0; // Valid page number
+        Integer invalidPageSize = 0; // Invalid page size
 
-        Throwable thrown = catchThrowable(() -> {
-            messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
+        Exception exception = assertThrows(MethodArgumentNotValidException.class, () -> {
+            messageService.getMessages(validPageNumber, invalidPageSize);
         });
 
-        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
-        ConstraintViolationException exception = (ConstraintViolationException) thrown;
-        assertThat(exception.getConstraintViolations()).hasSize(1);
-        ConstraintViolation<?> violation = exception.getConstraintViolations().iterator().next();
-        assertThat(violation.getPropertyPath().toString()).contains("pagesize");
-        assertThat(violation.getMessage()).isEqualTo("must be greater than 0");
+        String expectedMessage = "Page size should not be less than 1";
+        String actualMessage = exception.getMessage();
+
+        assertEquals(expectedMessage, actualMessage);
     }
 }
