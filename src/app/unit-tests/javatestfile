@@ -1,6 +1,64 @@
-   @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ProblemDetail> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Missing required request parameter");
-        problemDetail.setProperty("parameter", ex.getParameterName());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+
+import javax.validation.ConstraintViolation;
+import javax.validation.ConstraintViolationException;
+import java.util.Collections;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.Mockito.*;
+
+public class MessagesServiceTest {
+
+    @InjectMocks
+    private MessagesService messagesService;
+
+    @BeforeEach
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
     }
+
+    @Test
+    public void getAllMessages_ShouldThrowMissingServletRequestParameterException_WhenPageNumberIsMissing() {
+        Integer pageNumber = null; // Paramètre manquant
+        Integer pageSize = 10;
+        String sortBy = "id";
+        String order = "asc";
+        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
+
+        Throwable thrown = catchThrowable(() -> {
+            messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
+        });
+
+        assertThat(thrown).isInstanceOf(MissingServletRequestParameterException.class);
+        MissingServletRequestParameterException exception = (MissingServletRequestParameterException) thrown;
+        assertThat(exception.getParameterName()).isEqualTo("pagenumber");
+    }
+
+    @Test
+    public void getAllMessages_ShouldThrowConstraintViolationException_WhenPageSizeIsInvalid() {
+        Integer pageNumber = 0;
+        Integer pageSize = 0; // Paramètre invalide
+        String sortBy = "id";
+        String order = "asc";
+        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
+
+        Throwable thrown = catchThrowable(() -> {
+            messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
+        });
+
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        ConstraintViolationException exception = (ConstraintViolationException) thrown;
+        assertThat(exception.getConstraintViolations()).hasSize(1);
+        ConstraintViolation<?> violation = exception.getConstraintViolations().iterator().next();
+        assertThat(violation.getPropertyPath().toString()).contains("pagesize");
+        assertThat(violation.getMessage()).isEqualTo("must be greater than 0");
+    }
+}
