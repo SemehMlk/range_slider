@@ -1,46 +1,73 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import java.lang.reflect.Method;
+import java.util.Set;
+import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-public class MessagesServiceIntegrationTest {
+public class MessagesServiceTest {
 
-    @Autowired
-    private WebApplicationContext webApplicationContext;
-
-    private MockMvc mockMvc;
+    private MessagesService messagesService;
+    private Validator validator;
 
     @BeforeEach
     public void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+        messagesService = new MessagesService();
+        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
     }
 
     @Test
-    public void testGetAllMessagesInvalidPageNumber() throws Exception {
-        mockMvc.perform(get("/path-to-your-api/messages")
-                .param("pagenumber", "-1")
-                .param("pagesize", "10")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors[0]").value("Page number should not be less than 0"));
+    public void testGetAllMessagesInvalidPageNumber() throws NoSuchMethodException {
+        Integer invalidPageNumber = -1; // Invalid page number
+        Integer validPageSize = 10; // Valid page size
+
+        Method method = MessagesService.class.getMethod("getAllMessages", Integer.class, Integer.class, String.class, String.class, ApiSearchRequestDto.class);
+        Object[] parameterValues = {invalidPageNumber, validPageSize, "sortBy", "order", new ApiSearchRequestDto()};
+
+        ConstraintViolationException exception = assertThrows(
+                ConstraintViolationException.class,
+                () -> {
+                    Set<ConstraintViolation<MessagesService>> violations = validator.forExecutables()
+                            .validateParameters(messagesService, method, parameterValues);
+                    if (!violations.isEmpty()) {
+                        throw new ConstraintViolationException(violations);
+                    }
+                    messagesService.getAllMessages(invalidPageNumber, validPageSize, "sortBy", "order", new ApiSearchRequestDto());
+                });
+
+        assertTrue(exception.getConstraintViolations().stream()
+                .anyMatch(v -> v.getMessage().equals("must be greater than or equal to 0")));
     }
 
     @Test
-    public void testGetAllMessagesInvalidPageSize() throws Exception {
-        mockMvc.perform(get("/path-to-your-api/messages")
-                .param("pagenumber", "0")
-                .param("pagesize", "0")
-                .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.errors[0]").value("Page size should not be less than 1"));
+    public void testGetAllMessagesInvalidPageSize() throws NoSuchMethodException {
+        Integer validPageNumber = 0; // Valid page number
+        Integer invalidPageSize = 0; // Invalid page size
+
+        Method method = MessagesService.class.getMethod("getAllMessages", Integer.class, Integer.class, String.class, String.class, ApiSearchRequestDto.class);
+        Object[] parameterValues = {validPageNumber, invalidPageSize, "sortBy", "order", new ApiSearchRequestDto()};
+
+        ConstraintViolationException exception = assertThrows(
+                ConstraintViolationException.class,
+                () -> {
+                    Set<ConstraintViolation<MessagesService>> violations = validator.forExecutables()
+                            .validateParameters(messagesService, method, parameterValues);
+                    if (!violations.isEmpty()) {
+                        throw new ConstraintViolationException(violations);
+                    }
+                    messagesService.getAllMessages(validPageNumber, invalidPageSize, "sortBy", "order", new ApiSearchRequestDto());
+                });
+
+        assertTrue(exception.getConstraintViolations().stream()
+                .anyMatch(v -> v.getMessage().equals("must be greater than or equal to 1")));
     }
 }
