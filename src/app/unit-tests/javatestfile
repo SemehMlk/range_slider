@@ -1,51 +1,47 @@
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
-import jakarta.validation.ConstraintViolation;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.Validator;
-import jakarta.validation.executable.ExecutableValidator;
-import java.lang.reflect.Method;
-import java.util.Set;
-import static org.junit.jupiter.api.Assertions.*;
 
-public class MessagesServiceTest {
+import java.util.List;
+import java.util.stream.Collectors;
 
-    private MessagesService messagesService;
-    private ExecutableValidator executableValidator;
+@ControllerAdvice
+public class GlobalExceptionHandler {
 
-    @BeforeEach
-    public void setUp() {
-        messagesService = new MessagesService();
-        LocalValidatorFactoryBean factoryBean = new LocalValidatorFactoryBean();
-        factoryBean.afterPropertiesSet();
-        Validator validator = factoryBean.getValidator();
-        executableValidator = validator.forExecutables();
+    @ExceptionHandler(ConstraintViolationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ProblemDetail handleConstraintViolationException(ConstraintViolationException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Validation Error");
+        problemDetail.setDetail("One or more fields have validation errors");
+
+        List<String> errorDetails = ex.getConstraintViolations().stream()
+                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+                .collect(Collectors.toList());
+        problemDetail.setProperty("errors", errorDetails.toArray(new String[0]));
+
+        return problemDetail;
     }
 
-    @Test
-    public void testGetAllMessagesInvalidPageNumber() throws Exception {
-        Method method = MessagesService.class.getMethod("getAllMessages", Integer.class, Integer.class, String.class, String.class, ApiSearchRequestDto.class);
-        Object[] parameterValues = {-1, 10, "sortBy", "order", new ApiSearchRequestDto()}; // Invalid page number
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ProblemDetail handleMissingServletRequestParameterException(MissingServletRequestParameterException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Missing Parameter");
+        problemDetail.setDetail("Required request parameter is missing");
 
-        Set<ConstraintViolation<MessagesService>> violations = executableValidator.validateParameters(
-                messagesService, method, parameterValues);
+        String errorDetail = ex.getParameterName() + ": " + ex.getMessage();
+        problemDetail.setProperty("errors", new String[]{errorDetail});
 
-        assertFalse(violations.isEmpty());
-        ConstraintViolation<MessagesService> violation = violations.iterator().next();
-        assertEquals("Page number should not be less than 0", violation.getMessage());
+        return problemDetail;
     }
 
-    @Test
-    public void testGetAllMessagesInvalidPageSize() throws Exception {
-        Method method = MessagesService.class.getMethod("getAllMessages", Integer.class, Integer.class, String.class, String.class, ApiSearchRequestDto.class);
-        Object[] parameterValues = {0, 0, "sortBy", "order", new ApiSearchRequestDto()}; // Invalid page size
-
-        Set<ConstraintViolation<MessagesService>> violations = executableValidator.validateParameters(
-                messagesService, method, parameterValues);
-
-        assertFalse(violations.isEmpty());
-        ConstraintViolation<MessagesService> violation = violations.iterator().next();
-        assertEquals("Page size should not be less than 1", violation.getMessage());
-    }
+    // Vous pouvez ajouter d'autres gestionnaires d'exceptions ici si nécessaire
 }
