@@ -1,19 +1,37 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 
-import java.lang.reflect.Method;
-import java.time.LocalDate;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.Collections;
+import javax.validation.ConstraintViolationException;
+import javax.validation.Valid;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Positive;
+
+import java.util.stream.Collectors;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-public class MessageSpecificationBuilderTest {
+public class MessagesServiceTest {
+
+    @Mock
+    private CanonicalMessageRepository canonicalMessageRepository;
+
+    @Mock
+    private MessageMapper messageMapper;
+
+    @InjectMocks
+    private MessagesService messagesService;
 
     @BeforeEach
     public void setUp() {
@@ -21,114 +39,72 @@ public class MessageSpecificationBuilderTest {
     }
 
     @Test
-    public void buildSpecification_ShouldThrowInvalidRequestException_WhenCriteriaIsInvalid() {
-        ApiSearchRequestDto request = new ApiSearchRequestDto();
-        request.setCriteria(Collections.emptyList()); // Invalid criteria
+    public void getAllMessages_ShouldThrowConstraintViolationException_WhenPageNumberIsInvalid() {
+        int pageNumber = -1;
+        int pageSize = 10;
+        String sortBy = "id";
+        String order = "asc";
+        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
 
         Throwable thrown = catchThrowable(() -> {
-            MessageSpecificationBuilder.buildSpecification(request);
+            messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
         });
 
-        assertThat(thrown).isInstanceOf(InvalidRequestException.class);
-        InvalidRequestException exception = (InvalidRequestException) thrown;
-        assertThat(exception.getErrors()).hasSize(1);
-        assertThat(exception.getErrors().get(0).getMessage()).isEqualTo("Bad search request.");
-        assertThat(exception.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        ConstraintViolationException exception = (ConstraintViolationException) thrown;
+        assertThat(exception.getConstraintViolations()).hasSize(1);
+        assertThat(exception.getConstraintViolations().iterator().next().getMessage()).isEqualTo("must be greater than or equal to 0");
     }
 
     @Test
-    public void buildSpecification_ShouldReturnSpecification_WhenCriteriaIsValid() {
-        ApiSearchCriteriaDto criteria = new ApiSearchCriteriaDto();
-        criteria.setCriteriaType("EQUAL_DATE");
-        criteria.setSearchField(new ApiSearchableFieldDto());
-        criteria.getSearchField().setField("CREATION_DATE");
-        criteria.setSearchDateValue(LocalDate.now());
+    public void getAllMessages_ShouldThrowConstraintViolationException_WhenPageSizeIsInvalid() {
+        int pageNumber = 0;
+        int pageSize = 0;
+        String sortBy = "id";
+        String order = "asc";
+        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
 
-        ApiSearchRequestDto request = new ApiSearchRequestDto();
-        request.setCriteria(List.of(criteria));
-        request.setLogicOperator(ApiLogicSearchOperatorDto.AND);
+        Throwable thrown = catchThrowable(() -> {
+            messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
+        });
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
-
-        assertThat(spec).isNotNull();
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        ConstraintViolationException exception = (ConstraintViolationException) thrown;
+        assertThat(exception.getConstraintViolations()).hasSize(1);
+        assertThat(exception.getConstraintViolations().iterator().next().getMessage()).isEqualTo("must be greater than 0");
     }
 
     @Test
-    public void createDateTimeRangeSpecification_ShouldReturnCorrectSpecification() throws Exception {
-        ApiDateTimeRangeCriteriaDto criteria = new ApiDateTimeRangeCriteriaDto();
-        criteria.setSearchField(new ApiSearchableFieldDto());
-        criteria.getSearchField().setField("CREATION_DATE");
-        criteria.setMinDate(OffsetDateTime.now(ZoneOffset.UTC));
-        criteria.setMaxDate(OffsetDateTime.now(ZoneOffset.UTC).plusDays(1));
+    public void getAllMessages_ShouldReturnMessages_WhenRequestIsValid() {
+        int pageNumber = 0;
+        int pageSize = 10;
+        String sortBy = "id";
+        String order = "asc";
+        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
 
-        Method method = MessageSpecificationBuilder.class.getDeclaredMethod("createDateTimeRangeSpecification", ApiDateTimeRangeCriteriaDto.class);
-        method.setAccessible(true);
+        Specification<KemmCanonicalMessage> spec = (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
+        Sort.Direction direction = Sort.Direction.fromString(order);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(direction, sortBy));
+        KemmCanonicalMessage message = new KemmCanonicalMessage();
+        MessageDto messageDto = new MessageDto();
+        Page<KemmCanonicalMessage> messagePage = new PageImpl<>(Collections.singletonList(message));
 
-        Specification<KemmCanonicalMessage> spec = (Specification<KemmCanonicalMessage>) method.invoke(null, criteria);
+        when(canonicalMessageRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(messagePage);
+        when(messageMapper.toDto(any(KemmCanonicalMessage.class))).thenReturn(messageDto);
 
-        assertThat(spec).isNotNull();
+        ResponseEntity<MessagesPageDto> response = messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatusCodeValue()).isEqualTo(200);
+        MessagesPageDto body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getElements()).hasSize(1);
+        assertThat(body.getTotalElements()).isEqualTo(1);
+        assertThat(body.getCurrentPageNumber()).isEqualTo(pageNumber);
+        assertThat(body.getCurrentPageSize()).isEqualTo(pageSize);
+        assertThat(body.getTotalPages()).isEqualTo(1);
+
+        verify(canonicalMessageRepository).findAll(any(Specification.class), eq(pageable));
+        verify(messageMapper).toDto(any(KemmCanonicalMessage.class));
     }
-
-    @Test
-    public void createEqualDateSpecification_ShouldReturnCorrectSpecification() throws Exception {
-        ApiEqualDateCriteriaDto criteria = new ApiEqualDateCriteriaDto();
-        criteria.setSearchField(new ApiSearchableFieldDto());
-        criteria.getSearchField().setField("CREATION_DATE");
-        criteria.setSearchDateValue(LocalDate.now());
-
-        Method method = MessageSpecificationBuilder.class.getDeclaredMethod("createEqualDateSpecification", ApiEqualDateCriteriaDto.class);
-        method.setAccessible(true);
-
-        Specification<KemmCanonicalMessage> spec = (Specification<KemmCanonicalMessage>) method.invoke(null, criteria);
-
-        assertThat(spec).isNotNull();
-    }
-
-    @Test
-    public void createInLastTimeLapseSpecification_ShouldReturnCorrectSpecification() throws Exception {
-        ApiInLastTimeLapseCriteriaDto criteria = new ApiInLastTimeLapseCriteriaDto();
-        criteria.setSearchField(new ApiSearchableFieldDto());
-        criteria.getSearchField().setField("CREATION_DATE");
-        criteria.setTimeLapse(24);
-        criteria.setTimeUnit(ApiTimeUnitDto.HOUR);
-
-        Method method = MessageSpecificationBuilder.class.getDeclaredMethod("createInLastTimeLapseSpecification", ApiInLastTimeLapseCriteriaDto.class);
-        method.setAccessible(true);
-
-        Specification<KemmCanonicalMessage> spec = (Specification<KemmCanonicalMessage>) method.invoke(null, criteria);
-
-        assertThat(spec).isNotNull();
-    }
-
-    @Test
-    public void createTextSpecification_ShouldReturnCorrectSpecification() throws Exception {
-        ApiTextCriteriaDto criteria = new ApiTextCriteriaDto();
-        criteria.setSearchField(new ApiSearchableFieldDto());
-        criteria.getSearchField().setField("MESSAGE_CONTENT");
-        criteria.setSearchText("test");
-
-        Method method = MessageSpecificationBuilder.class.getDeclaredMethod("createTextSpecification", ApiTextCriteriaDto.class);
-        method.setAccessible(true);
-
-        Specification<KemmCanonicalMessage> spec = (Specification<KemmCanonicalMessage>) method.invoke(null, criteria);
-
-        assertThat(spec).isNotNull();
-    }
-
-    @Test
-    public void createRegexSpecification_ShouldReturnCorrectSpecification() throws Exception {
-        ApiRegexCriteriaDto criteria = new ApiRegexCriteriaDto();
-        criteria.setSearchField(new ApiSearchableFieldDto());
-        criteria.getSearchField().setField("MESSAGE_CONTENT");
-        criteria.setSearchValue("test.*");
-
-        Method method = MessageSpecificationBuilder.class.getDeclaredMethod("createRegexSpecification", ApiRegexCriteriaDto.class);
-        method.setAccessible(true);
-
-        Specification<KemmCanonicalMessage> spec = (Specification<KemmCanonicalMessage>) method.invoke(null, criteria);
-
-        assertThat(spec).isNotNull();
-    }
-
-    // Ajoutez d'autres tests pour les autres méthodes privées si nécessaire
 }
