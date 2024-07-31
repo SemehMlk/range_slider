@@ -1,31 +1,139 @@
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import javax.validation.ConstraintViolationException;
+import javax.validation.*;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Positive;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-@RestControllerAdvice
-public class GlobalExceptionHandler {
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-    @ExceptionHandler(InvalidRequestException.class)
-    public ResponseEntity<ProblemDetail> handleInvalidRequestException(InvalidRequestException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getProblemDetail());
+public class MessagesServiceTest {
+
+    @Mock
+    private CanonicalMessageRepository canonicalMessageRepository;
+
+    @Mock
+    private MessageMapper messageMapper;
+
+    @InjectMocks
+    private MessagesService messagesService;
+
+    private Validator validator;
+
+    @BeforeEach
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
+        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
     }
 
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ProblemDetail> handleConstraintViolationException(ConstraintViolationException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request parameters");
-        problemDetail.setProperty("violations", ex.getConstraintViolations());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    @Test
+    public void getAllMessages_ShouldThrowConstraintViolationException_WhenPageNumberIsInvalid() {
+        int pageNumber = -1;
+        int pageSize = 10;
+        String sortBy = "id";
+        String order = "asc";
+        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
+
+        Set<ConstraintViolation<MessagesService>> violations = validator.forExecutables().validateParameters(
+                messagesService,
+                findMethod("getAllMessages", Integer.class, Integer.class, String.class, String.class, ApiSearchRequestDto.class),
+                new Object[]{pageNumber, pageSize, sortBy, order, apiSearchRequest}
+        );
+
+        Throwable thrown = catchThrowable(() -> {
+            if (!violations.isEmpty()) {
+                throw new ConstraintViolationException(violations);
+            }
+            messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
+        });
+
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        ConstraintViolationException exception = (ConstraintViolationException) thrown;
+        assertThat(exception.getConstraintViolations()).hasSize(1);
+        assertThat(exception.getConstraintViolations().iterator().next().getMessage()).isEqualTo("must be greater than or equal to 0");
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ProblemDetail> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request parameters");
-        problemDetail.setProperty("violations", ex.getBindingResult().getAllErrors());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(problemDetail);
+    @Test
+    public void getAllMessages_ShouldThrowConstraintViolationException_WhenPageSizeIsInvalid() {
+        int pageNumber = 0;
+        int pageSize = 0;
+        String sortBy = "id";
+        String order = "asc";
+        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
+
+        Set<ConstraintViolation<MessagesService>> violations = validator.forExecutables().validateParameters(
+                messagesService,
+                findMethod("getAllMessages", Integer.class, Integer.class, String.class, String.class, ApiSearchRequestDto.class),
+                new Object[]{pageNumber, pageSize, sortBy, order, apiSearchRequest}
+        );
+
+        Throwable thrown = catchThrowable(() -> {
+            if (!violations.isEmpty()) {
+                throw new ConstraintViolationException(violations);
+            }
+            messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
+        });
+
+        assertThat(thrown).isInstanceOf(ConstraintViolationException.class);
+        ConstraintViolationException exception = (ConstraintViolationException) thrown;
+        assertThat(exception.getConstraintViolations()).hasSize(1);
+        assertThat(exception.getConstraintViolations().iterator().next().getMessage()).isEqualTo("must be greater than 0");
+    }
+
+    @Test
+    public void getAllMessages_ShouldReturnMessages_WhenRequestIsValid() {
+        int pageNumber = 0;
+        int pageSize = 10;
+        String sortBy = "id";
+        String order = "asc";
+        ApiSearchRequestDto apiSearchRequest = new ApiSearchRequestDto();
+
+        Specification<KemmCanonicalMessage> spec = (root, query, criteriaBuilder) -> criteriaBuilder.conjunction();
+        Sort.Direction direction = Sort.Direction.fromString(order);
+        Pageable pageable = PageRequest.of(pageNumber, pageSize, Sort.by(direction, sortBy));
+        KemmCanonicalMessage message = new KemmCanonicalMessage();
+        MessageDto messageDto = new MessageDto();
+        Page<KemmCanonicalMessage> messagePage = new PageImpl<>(Collections.singletonList(message));
+
+        when(canonicalMessageRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(messagePage);
+        when(messageMapper.toDto(any(KemmCanonicalMessage.class))).thenReturn(messageDto);
+
+        ResponseEntity<MessagesPageDto> response = messagesService.getAllMessages(pageNumber, pageSize, sortBy, order, apiSearchRequest);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatusCodeValue()).isEqualTo(200);
+        MessagesPageDto body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getElements()).hasSize(1);
+        assertThat(body.getTotalElements()).isEqualTo(1);
+        assertThat(body.getCurrentPageNumber()).isEqualTo(pageNumber);
+        assertThat(body.getCurrentPageSize()).isEqualTo(pageSize);
+        assertThat(body.getTotalPages()).isEqualTo(1);
+
+        verify(canonicalMessageRepository).findAll(any(Specification.class), eq(pageable));
+        verify(messageMapper).toDto(any(KemmCanonicalMessage.class));
+    }
+
+    private java.lang.reflect.Method findMethod(String methodName, Class<?>... parameterTypes) {
+        try {
+            return MessagesService.class.getMethod(methodName, parameterTypes);
+        } catch (NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
