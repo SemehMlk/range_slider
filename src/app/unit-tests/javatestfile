@@ -1,77 +1,29 @@
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.MockitoAnnotations;
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
-import jakarta.validation.Validation;
-import jakarta.validation.Validator;
-import jakarta.validation.executable.ExecutableValidator;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import java.lang.reflect.Method;
-import java.util.Set;
+import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class MessagesServiceTest {
+public class ApiFieldMapperTest {
 
-    @InjectMocks
-    private MessagesService messagesService;
-
-    private Validator validator;
-
-    @BeforeEach
-    public void setUp() {
-        MockitoAnnotations.openMocks(this);
-        LocalValidatorFactoryBean factoryBean = new LocalValidatorFactoryBean();
-        factoryBean.afterPropertiesSet();
-        validator = factoryBean.getValidator();
+    @ParameterizedTest
+    @MethodSource("provideFieldEnums")
+    public void testGetColumnName(SearchableFieldDto.FieldEnum fieldEnum, String expectedColumnName) {
+        String columnName = ApiFieldMapper.getColumnName(fieldEnum);
+        assertThat(columnName).isEqualTo(expectedColumnName);
     }
 
-    @Test
-    public void testGetAllMessagesInvalidPageNumber() throws NoSuchMethodException {
-        Integer invalidPageNumber = -1; // Invalid page number
-        Integer validPageSize = 10; // Valid page size
-
-        Method method = MessagesService.class.getMethod("getAllMessages", Integer.class, Integer.class, String.class, String.class, ApiSearchRequestDto.class);
-        Object[] parameterValues = {invalidPageNumber, validPageSize, "sortBy", "order", new ApiSearchRequestDto()};
-
-        ConstraintViolationException exception = assertThrows(
-                ConstraintViolationException.class,
-                () -> {
-                    Set<ConstraintViolation<MessagesService>> violations = validator.forExecutables()
-                            .validateParameters(messagesService, method, parameterValues);
-                    if (!violations.isEmpty()) {
-                        throw new ConstraintViolationException(violations);
-                    }
-                    messagesService.getAllMessages(invalidPageNumber, validPageSize, "sortBy", "order", new ApiSearchRequestDto());
-                });
-
-        assertTrue(exception.getConstraintViolations().stream()
-                .anyMatch(v -> v.getMessage().equals("must be greater than or equal to 0")));
-    }
-
-    @Test
-    public void testGetAllMessagesInvalidPageSize() throws NoSuchMethodException {
-        Integer validPageNumber = 0; // Valid page number
-        Integer invalidPageSize = 0; // Invalid page size
-
-        Method method = MessagesService.class.getMethod("getAllMessages", Integer.class, Integer.class, String.class, String.class, ApiSearchRequestDto.class);
-        Object[] parameterValues = {validPageNumber, invalidPageSize, "sortBy", "order", new ApiSearchRequestDto()};
-
-        ConstraintViolationException exception = assertThrows(
-                ConstraintViolationException.class,
-                () -> {
-                    Set<ConstraintViolation<MessagesService>> violations = validator.forExecutables()
-                            .validateParameters(messagesService, method, parameterValues);
-                    if (!violations.isEmpty()) {
-                        throw new ConstraintViolationException(violations);
-                    }
-                    messagesService.getAllMessages(validPageNumber, invalidPageSize, "sortBy", "order", new ApiSearchRequestDto());
-                });
-
-        assertTrue(exception.getConstraintViolations().stream()
-                .anyMatch(v -> v.getMessage().equals("must be greater than or equal to 1")));
+    private static Stream<Arguments> provideFieldEnums() {
+        return Stream.of(
+            Arguments.of(SearchableFieldDto.FieldEnum.ID, "id"),
+            Arguments.of(SearchableFieldDto.FieldEnum.INPUT_FORMAT, "inputMessageFormat"),
+            Arguments.of(SearchableFieldDto.FieldEnum.INPUT_TYPE, "inputMessageType"),
+            Arguments.of(SearchableFieldDto.FieldEnum.OUTPUT_TYPE, "outputMessageType"),
+            Arguments.of(SearchableFieldDto.FieldEnum.DIRECTION, "direction"),
+            Arguments.of(SearchableFieldDto.FieldEnum.TRANSLATION_STATUS, "translationStatus"),
+            Arguments.of(SearchableFieldDto.FieldEnum.GLOBAL_STATUS, "globalStatus")
+        );
     }
 }
