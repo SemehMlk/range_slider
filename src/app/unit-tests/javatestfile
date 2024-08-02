@@ -1,29 +1,37 @@
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
+import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
 
-import java.util.stream.Stream;
+@Injectable({
+  providedIn: 'root'
+})
+export class FilterService {
+  private filtersMap: Map<string, BehaviorSubject<any>> = new Map();
 
-import static org.assertj.core.api.Assertions.assertThat;
+  constructor() {
+    // Initialiser les BehaviorSubjects pour chaque type de message
+    this.filtersMap.set('TECHNICAL_MESSAGES', new BehaviorSubject<any>({}));
+    this.filtersMap.set('FUNCTIONAL_MESSAGES', new BehaviorSubject<any>({}));
+    this.filtersMap.set('OPTIM_MESSAGES', new BehaviorSubject<any>({}));
+  }
 
-public class ApiFieldMapperTest {
-
-    @ParameterizedTest
-    @MethodSource("provideFieldEnums")
-    public void testGetColumnName(SearchableFieldDto.FieldEnum fieldEnum, String expectedColumnName) {
-        String columnName = ApiFieldMapper.getColumnName(fieldEnum);
-        assertThat(columnName).isEqualTo(expectedColumnName);
+  setFilters(type: string, filters: any) {
+    if (this.filtersMap.has(type)) {
+      this.filtersMap.get(type).next(filters);
     }
+  }
 
-    private static Stream<Arguments> provideFieldEnums() {
-        return Stream.of(
-            Arguments.of(SearchableFieldDto.FieldEnum.ID, "id"),
-            Arguments.of(SearchableFieldDto.FieldEnum.INPUT_FORMAT, "inputMessageFormat"),
-            Arguments.of(SearchableFieldDto.FieldEnum.INPUT_TYPE, "inputMessageType"),
-            Arguments.of(SearchableFieldDto.FieldEnum.OUTPUT_TYPE, "outputMessageType"),
-            Arguments.of(SearchableFieldDto.FieldEnum.DIRECTION, "direction"),
-            Arguments.of(SearchableFieldDto.FieldEnum.TRANSLATION_STATUS, "translationStatus"),
-            Arguments.of(SearchableFieldDto.FieldEnum.GLOBAL_STATUS, "globalStatus")
-        );
+  getFilters(type: string): Observable<any> {
+    if (this.filtersMap.has(type)) {
+      return this.filtersMap.get(type).asObservable();
+    } else {
+      // Retourne un observable vide si le type n'existe pas
+      return new BehaviorSubject<any>({}).asObservable();
     }
+  }
+
+  clearFilters(type: string) {
+    if (this.filtersMap.has(type)) {
+      this.filtersMap.get(type).next({});
+    }
+  }
 }
