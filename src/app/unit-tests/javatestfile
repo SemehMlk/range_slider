@@ -1,6 +1,16 @@
 // _tags.scss
-@mixin tag-styles($background-color, $border-color, $text-color) {
+@mixin tag-filled($background-color, $text-color) {
   background-color: $background-color;
+  border: none;
+  color: $text-color;
+  padding: 0.25em 0.5em;
+  border-radius: 0.25em;
+  display: inline-block;
+  font-size: 0.875em;
+}
+
+@mixin tag-outlined($border-color, $text-color) {
+  background-color: transparent;
   border: 1px solid $border-color;
   color: $text-color;
   padding: 0.25em 0.5em;
@@ -24,37 +34,19 @@ $directions: (
 );
 
 @each $status, $colors in $statuses {
-  .tag-#{$status} {
-    @include tag-styles(nth($colors, 1), nth($colors, 2), nth($colors, 3));
+  .tag-filled-#{$status} {
+    @include tag-filled(nth($colors, 1), nth($colors, 3));
+  }
+  .tag-outlined-#{$status} {
+    @include tag-outlined(nth($colors, 2), nth($colors, 3));
   }
 }
 
 @each $direction, $colors in $directions {
-  .tag-#{$direction} {
-    @include tag-styles(nth($colors, 1), nth($colors, 2), nth($colors, 3));
+  .tag-filled-#{$direction} {
+    @include tag-filled(nth($colors, 1), nth($colors, 3));
   }
-}
-
---------------------------------------------------
-
-// tag.component.ts
-import { Component, Input } from '@angular/core';
-
-@Component({
-  selector: 'app-tag',
-  template: `
-    <div class="tag" [ngClass]="getTagClass()">
-      {{ text }}
-    </div>
-  `,
-  styleUrls: ['./tag.component.scss']
-})
-export class TagComponent {
-  @Input() type: 'status' | 'direction';
-  @Input() value: string;
-  @Input() text: string;
-
-  getTagClass(): string {
-    return `tag-${this.value}`;
+  .tag-outlined-#{$direction} {
+    @include tag-outlined(nth($colors, 2), nth($colors, 3));
   }
 }
