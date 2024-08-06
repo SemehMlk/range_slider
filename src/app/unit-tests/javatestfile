@@ -1,37 +1,60 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+// _tags.scss
+@mixin tag-styles($background-color, $border-color, $text-color) {
+  background-color: $background-color;
+  border: 1px solid $border-color;
+  color: $text-color;
+  padding: 0.25em 0.5em;
+  border-radius: 0.25em;
+  display: inline-block;
+  font-size: 0.875em;
+}
 
-@Injectable({
-  providedIn: 'root'
+$statuses: (
+  'draft': (#f0f0f0, #d0d0d0, #000),
+  'in-progress': (#ffecb3, #ffb300, #000),
+  'completed': (#c8e6c9, #388e3c, #000),
+  'rejected': (#ffcdd2, #d32f2f, #000),
+  'approved': (#bbdefb, #1976d2, #000),
+  'archived': (#e0e0e0, #9e9e9e, #000)
+);
+
+$directions: (
+  'up': (#d1c4e9, #673ab7, #000),
+  'down': (#c5cae9, #3f51b5, #000)
+);
+
+@each $status, $colors in $statuses {
+  .tag-#{$status} {
+    @include tag-styles(nth($colors, 1), nth($colors, 2), nth($colors, 3));
+  }
+}
+
+@each $direction, $colors in $directions {
+  .tag-#{$direction} {
+    @include tag-styles(nth($colors, 1), nth($colors, 2), nth($colors, 3));
+  }
+}
+
+--------------------------------------------------
+
+// tag.component.ts
+import { Component, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-tag',
+  template: `
+    <div class="tag" [ngClass]="getTagClass()">
+      {{ text }}
+    </div>
+  `,
+  styleUrls: ['./tag.component.scss']
 })
-export class FilterService {
-  private filtersMap: Map<string, BehaviorSubject<any>> = new Map();
+export class TagComponent {
+  @Input() type: 'status' | 'direction';
+  @Input() value: string;
+  @Input() text: string;
 
-  constructor() {
-    // Initialiser les BehaviorSubjects pour chaque type de message
-    this.filtersMap.set('TECHNICAL_MESSAGES', new BehaviorSubject<any>({}));
-    this.filtersMap.set('FUNCTIONAL_MESSAGES', new BehaviorSubject<any>({}));
-    this.filtersMap.set('OPTIM_MESSAGES', new BehaviorSubject<any>({}));
-  }
-
-  setFilters(type: string, filters: any) {
-    if (this.filtersMap.has(type)) {
-      this.filtersMap.get(type).next(filters);
-    }
-  }
-
-  getFilters(type: string): Observable<any> {
-    if (this.filtersMap.has(type)) {
-      return this.filtersMap.get(type).asObservable();
-    } else {
-      // Retourne un observable vide si le type n'existe pas
-      return new BehaviorSubject<any>({}).asObservable();
-    }
-  }
-
-  clearFilters(type: string) {
-    if (this.filtersMap.has(type)) {
-      this.filtersMap.get(type).next({});
-    }
+  getTagClass(): string {
+    return `tag-${this.value}`;
   }
 }
