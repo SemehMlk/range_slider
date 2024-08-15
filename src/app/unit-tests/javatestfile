@@ -1,58 +1,54 @@
-import { TestBed } from '@angular/core/testing';
-import { of, Subject, Observable } from 'rxjs';
-import { TranslateService, LangChangeEvent } from '@ngx-translate/core';
-import { DashboardComponent } from './dashboard.component';
+interface FieldInput {
+  fieldType: string;
+  field: string;
+  operators: string[];
+  options?: string[];
+}
 
-class MockTranslateService {
-  // Créez un sujet pour onLangChange avec un type spécifique
-  public onLangChange = new Subject<LangChangeEvent>();
+class FieldsBuilder {
+  private fields: Fields = {};
 
-  // Mock de la méthode get pour retourner une Observable<string>
-  get(key: string | Array<string>): Observable<string | Object> {
-    return of(key);
+  addField(name: string, type: string, operators: string[], options?: string[]): FieldsBuilder {
+    this.fields[name] = {
+      name: name,
+      type: type,
+      operators: operators,
+      options: options || [],
+      value: name
+    };
+    return this;
   }
 
-  // Mock de la méthode instant pour retourner un string ou un object basé sur le type de la clé
-  instant(key: string | Array<string>): string | Object {
-    if (typeof key === 'string') {
-      return key;
-    } else {
-      // Si c'est un tableau, retournez un objet avec les clés correspondantes
-      return key.reduce((acc, curr) => {
-        acc[curr] = curr;
-        return acc;
-      }, {} as Record<string, string>);
-    }
+  buildFromArray(inputArray: FieldInput[]): FieldsBuilder {
+    inputArray.forEach((input) => {
+      this.addField(input.field, input.fieldType, input.operators, input.options);
+    });
+    return this;
+  }
+
+  build(): { fields: Fields } {
+    return { fields: this.fields };
   }
 }
 
-describe('DashboardComponent', () => {
-  let component: DashboardComponent;
-  let fixture: ComponentFixture<DashboardComponent>;
+// Exemple d'utilisation avec un tableau d'objets
+const inputData = [
+  {
+    fieldType: "DATETIME",
+    field: "MESSAGE_CREATION_DATE",
+    operators: ["EQUAL", "NOT_EQUAL", "BETWEEN", "GREATER_THAN", "LESS_THAN"],
+    options: []
+  },
+  {
+    fieldType: "ENUM",
+    field: "MESSAGE_DIRECTION",
+    operators: ["IN", "NOT_IN"],
+    options: ["INPUT", "OUTPUT"]
+  }
+];
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [DashboardComponent],
-      providers: [
-        { provide: TranslateService, useClass: MockTranslateService },
-        provideHttpClient(),
-        provideHttpClientTesting()
-      ]
-    }).compileComponents();
-  });
+const fieldsConfig = new FieldsBuilder()
+  .buildFromArray(inputData)
+  .build();
 
-  beforeEach(() => {
-    fixture = TestBed.createComponent(DashboardComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
-  });
-
-  it('should return translation instantly', () => {
-    const translateService = TestBed.inject(TranslateService);
-    const translation = translateService.instant('some.key');
-
-    expect(transla
+console.log(fieldsConfig);
