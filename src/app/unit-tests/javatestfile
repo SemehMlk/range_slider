@@ -1,54 +1,30 @@
-interface FieldInput {
-  fieldType: string;
-  field: string;
-  operators: string[];
-  options?: string[];
+@use '@angular/material' as mat;
+
+// Définir une palette de couleurs primaires personnalisée
+$custom-primary: mat.define-palette(mat.$indigo-palette);
+
+// Définir une palette de couleurs d'accent personnalisée
+$custom-accent: mat.define-palette(mat.$pink-palette, A200, A100, A400);
+
+// Définir une palette de couleurs d'alerte (warn) personnalisée
+$custom-warn: mat.define-palette(mat.$red-palette);
+
+// Créer un thème en utilisant les palettes personnalisées
+$custom-theme: mat.define-light-theme((
+  color: (
+    primary: $custom-primary,
+    accent: $custom-accent,
+    warn: $custom-warn,
+  )
+));
+
+.custom-theme {
+  @include mat.all-component-themes($custom-theme);
 }
 
-class FieldsBuilder {
-  private fields: Fields = {};
-
-  addField(name: string, type: string, operators: string[], options?: string[]): FieldsBuilder {
-    this.fields[name] = {
-      name: name,
-      type: type,
-      operators: operators,
-      options: options || [],
-      value: name
-    };
-    return this;
-  }
-
-  buildFromArray(inputArray: FieldInput[]): FieldsBuilder {
-    inputArray.forEach((input) => {
-      this.addField(input.field, input.fieldType, input.operators, input.options);
-    });
-    return this;
-  }
-
-  build(): { fields: Fields } {
-    return { fields: this.fields };
-  }
+.custom-theme {
+  @include mat.button-theme($custom-theme);
+  @include mat.input-theme($custom-theme);
+  @include mat.select-theme($custom-theme);
+  @include mat.datepicker-theme($custom-theme);
 }
-
-// Exemple d'utilisation avec un tableau d'objets
-const inputData = [
-  {
-    fieldType: "DATETIME",
-    field: "MESSAGE_CREATION_DATE",
-    operators: ["EQUAL", "NOT_EQUAL", "BETWEEN", "GREATER_THAN", "LESS_THAN"],
-    options: []
-  },
-  {
-    fieldType: "ENUM",
-    field: "MESSAGE_DIRECTION",
-    operators: ["IN", "NOT_IN"],
-    options: ["INPUT", "OUTPUT"]
-  }
-];
-
-const fieldsConfig = new FieldsBuilder()
-  .buildFromArray(inputData)
-  .build();
-
-console.log(fieldsConfig);
