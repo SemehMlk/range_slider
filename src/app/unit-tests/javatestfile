@@ -1,119 +1,18 @@
-openapi: 3.0.0
-info:
-  title: Stream API
-  description: API for creating and listing streams
-  version: 1.0.0
-components:
-  schemas:
-    TechnicalParameters:
-      type: object
-      properties:
-        channel:
-          type: string
-        host:
-          type: string
-        mqUser:
-          type: string
-        mqPassword:
-          type: string
-        port:
-          type: integer
-          format: int32
-      required:
-        - channel
-        - host
-        - mqUser
-        - port
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.factory.Mappers;
 
-    KemmMqManager:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        queueManager:
-          type: string
-        channel:
-          type: string
-        host:
-          type: string
-        mqUser:
-          type: string
-        port:
-          type: integer
-          format: int32
+@Mapper(componentModel = "spring")
+public interface KemmStreamMapper {
 
-    KemmMqStream:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        upStreamQueue:
-          type: string
-        downStreamQueue:
-          type: string
-        replyToDownStreamQueue:
-          type: string
-        kemmMqManager:
-          $ref: '#/components/schemas/KemmMqManager'
+    KemmStreamMapper INSTANCE = Mappers.getMapper(KemmStreamMapper.class);
 
-    KemmStream:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        alias:
-          type: string
-        type:
-          type: string
-        description:
-          type: string
-        status:
-          type: string
-        inputMessageType:
-          type: string
-        creationDate:
-          type: string
-          format: date-time
-        mqStreamDetails:
-          $ref: '#/components/schemas/KemmMqStream'
+    @Mapping(source = "kemmMqManagerSource.channel", target = "technicalParameters.channel")
+    @Mapping(source = "kemmMqManagerSource.host", target = "technicalParameters.host")
+    @Mapping(source = "kemmMqManagerSource.mqUser", target = "technicalParameters.mqUser")
+    @Mapping(source = "kemmMqManagerSource.mqPassword", target = "technicalParameters.mqPassword")
+    @Mapping(source = "kemmMqManagerSource.port", target = "technicalParameters.port")
+    KemmStreamDto toDto(KemmStream kemmStream);
 
-    CreateMqStreamRequest:
-      type: object
-      properties:
-        alias:
-          type: string
-        type:
-          type: string
-        description:
-          type: string
-        status:
-          type: string
-        inputMessageType:
-          type: string
-        upStreamQueue:
-          type: string
-        downStreamQueue:
-          type: string
-        replyToDownStreamQueue:
-          type: string
-        technicalParameters:
-          $ref: '#/components/schemas/TechnicalParameters'
-      required:
-        - alias
-        - type
-        - upStreamQueue
-        - downStreamQueue
-        - technicalParameters
-
-    StreamList:
-      type: array
-      items:
-        $ref: '#/components/schemas/KemmStream'
-
-
-
-
-
+    List<KemmStreamDto> toDtoList(List<KemmStream> kemmStreams);
+}
