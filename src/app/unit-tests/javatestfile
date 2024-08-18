@@ -4,47 +4,19 @@
     xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    <changeSet id="1-create-kemm-stream-details" author="your-name">
-        <createTable tableName="t_kemm_stream_details">
-            <column name="id" type="BIGINT">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="stream_type" type="VARCHAR(50)">
-                <constraints nullable="false"/>
-            </column>
-            <!-- Add any common columns for all stream details here -->
-        </createTable>
-
-        <createTable tableName="t_kemm_mq_stream">
-            <column name="id" type="BIGINT">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="up_stream_queue" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="down_stream_queue" type="VARCHAR(255)">
-                <constraints nullable="false"/>
-            </column>
-            <column name="reply_to_down_stream_queue" type="VARCHAR(255)"/>
-            <column name="kemm_mq_manager_id" type="BIGINT">
-                <constraints nullable="false" foreignKeyName="fk_kemm_mq_manager_stream"/>
-            </column>
-        </createTable>
-
+    <changeSet id="2-add-foreign-keys-to-mq-stream" author="your-name">
         <addForeignKeyConstraint 
             baseTableName="t_kemm_mq_stream"
             baseColumnNames="id"
             referencedTableName="t_kemm_stream_details"
             referencedColumnNames="id"
             constraintName="fk_mq_stream_details"/>
-
+        
         <addForeignKeyConstraint 
             baseTableName="t_kemm_mq_stream"
             baseColumnNames="kemm_mq_manager_id"
             referencedTableName="t_kemm_mq_manager"
             referencedColumnNames="id"
             constraintName="fk_kemm_mq_manager_stream"/>
-
-        <!-- Create other specific stream tables similarly, such as t_kemm_print_stream -->
     </changeSet>
 </databaseChangeLog>
