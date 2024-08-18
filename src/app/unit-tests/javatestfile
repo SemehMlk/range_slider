@@ -1,39 +1,36 @@
-@use '@angular/material' as mat;
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-$custom-primary: mat.define-palette(mat.$green-palette);  // Palette principale en vert
-$custom-accent: mat.define-palette(mat.$pink-palette);
-$custom-warn: mat.define-palette(mat.$red-palette);
+    <!-- Renommer la table kemm_partner à kemm_stream -->
+    <changeSet id="1-rename-table-kemm_partner" author="votre_nom">
+        <renameTable
+            oldTableName="kemm_partner"
+            newTableName="kemm_stream"/>
+    </changeSet>
 
-$custom-theme: mat.define-light-theme((
-  color: (
-    primary: $custom-primary,
-    accent: $custom-accent,
-    warn: $custom-warn,
-  ),
-));
+    <!-- Renommer la table kemm_mq_partner à kemm_mq_stream -->
+    <changeSet id="2-rename-table-kemm_mq_partner" author="votre_nom">
+        <renameTable
+            oldTableName="kemm_mq_partner"
+            newTableName="kemm_mq_stream"/>
+    </changeSet>
 
-.custom-select-theme {
-  @include mat.select-theme($custom-theme);
+    <!-- Renommer les colonnes queueNameIn et queueNameOut à upstream et downstream dans la table kemm_mq_stream -->
+    <changeSet id="3-rename-columns-kemm_mq_stream" author="votre_nom">
+        <renameColumn
+            tableName="kemm_mq_stream"
+            oldColumnName="queueNameIn"
+            newColumnName="upstream"
+            columnDataType="VARCHAR(255)"/> <!-- Adaptez le type de colonne si nécessaire -->
+        
+        <renameColumn
+            tableName="kemm_mq_stream"
+            oldColumnName="queueNameOut"
+            newColumnName="downstream"
+            columnDataType="VARCHAR(255)"/> <!-- Adaptez le type de colonne si nécessaire -->
+    </changeSet>
 
-  // Personnaliser l'icône check
-  .mat-select-panel .mat-option.mat-selected .mat-pseudo-checkbox-checked,
-  .mat-select-panel .mat-option.mat-selected .mat-pseudo-checkbox {
-    background-color: mat.get-color-from-palette($custom-primary) !important;  // Appliquer la couleur primaire personnalisée
-  }
-}
-
-.custom-datepicker-theme {
-  @include mat.datepicker-theme($custom-theme);
-
-  // Personnaliser la couleur de fond des dates sélectionnées
-  .mat-calendar-body-selected, .mat-calendar-body-range-start, .mat-calendar-body-range-end {
-    background-color: mat.get-color-from-palette($custom-primary) !important;  // Fond vert pour la date sélectionnée
-    color: mat.get-contrast-color-from-palette($custom-primary) !important;  // Contraste du texte
-  }
-
-  // Pour les plages de dates (range selection)
-  .mat-calendar-body-in-range {
-    background-color: mat.get-color-from-palette($custom-primary, 0.5) !important;  // Fond semi-transparent pour les dates dans la plage
-  }
-}
-
+</databaseChangeLog>
