@@ -1,18 +1,15 @@
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.factory.Mappers;
+import jakarta.persistence.*;
 
-@Mapper(componentModel = "spring")
-public interface KemmStreamMapper {
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = "stream_type")
+@Entity
+@Table(name = "t_kemm_stream_details")
+public abstract class KemmStreamDetails {
 
-    KemmStreamMapper INSTANCE = Mappers.getMapper(KemmStreamMapper.class);
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "t_kemm_stream_details_gen")
+    @SequenceGenerator(name = "t_kemm_stream_details_gen", sequenceName = "t_kemm_stream_details_seq", allocationSize = 1)
+    private Long id;
 
-    @Mapping(source = "kemmMqManagerSource.channel", target = "technicalParameters.channel")
-    @Mapping(source = "kemmMqManagerSource.host", target = "technicalParameters.host")
-    @Mapping(source = "kemmMqManagerSource.mqUser", target = "technicalParameters.mqUser")
-    @Mapping(source = "kemmMqManagerSource.mqPassword", target = "technicalParameters.mqPassword")
-    @Mapping(source = "kemmMqManagerSource.port", target = "technicalParameters.port")
-    KemmStreamDto toDto(KemmStream kemmStream);
-
-    List<KemmStreamDto> toDtoList(List<KemmStream> kemmStreams);
+    // Champs communs, s'il y en a
 }
