@@ -1,22 +1,13 @@
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+@Mapper(componentModel = "spring")
+public interface StreamMapper {
 
-    <changeSet id="2-add-foreign-keys-to-mq-stream" author="your-name">
-        <addForeignKeyConstraint 
-            baseTableName="t_kemm_mq_stream"
-            baseColumnNames="id"
-            referencedTableName="t_kemm_stream_details"
-            referencedColumnNames="id"
-            constraintName="fk_mq_stream_details"/>
-        
-        <addForeignKeyConstraint 
-            baseTableName="t_kemm_mq_stream"
-            baseColumnNames="kemm_mq_manager_id"
-            referencedTableName="t_kemm_mq_manager"
-            referencedColumnNames="id"
-            constraintName="fk_kemm_mq_manager_stream"/>
-    </changeSet>
-</databaseChangeLog>
+    @Mapping(source = "upStreamQueue", target = "upStreamQueue", ignore = true) // ignore si non applicable
+    @Mapping(source = "downStreamQueue", target = "downStreamQueue", ignore = true)
+    @Mapping(source = "replyToDownStreamQueue", target = "replyToDownStreamQueue", ignore = true)
+    StreamDto toDto(KemmStream stream);
+
+    @Mapping(source = "upStreamQueue", target = "upStreamQueue")
+    @Mapping(source = "downStreamQueue", target = "downStreamQueue")
+    @Mapping(source = "replyToDownStreamQueue", target = "replyToDownStreamQueue")
+    StreamDto toDto(KemmMqStream mqStream);
+}
