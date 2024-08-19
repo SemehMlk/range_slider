@@ -1,41 +1,45 @@
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
+components:
+  schemas:
+    KemmMqManagerDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        queueManager:
+          type: string
+        channel:
+          type: string
+        host:
+          type: string
+        mqUser:
+          type: string
+        port:
+          type: integer
+          format: int32
+      required:
+        - id
+        - queueManager
+        - channel
+        - host
+        - mqUser
+        - port
 
-@Mapper(componentModel = "spring")
-public interface StreamMapper {
 
-    KemmStreamDto toDto(KemmStream stream);
 
-    @Mapping(source = "kemmMqManagerSource.id", target = "managerId")
-    KemmMqStreamDto toMqStreamDto(KemmMqStream stream);
-
-    @Mapping(source = "managerId", target = "kemmMqManagerSource", qualifiedByName = "mapManagerIdToKemmMqManager")
-    KemmMqStream toKemmMqStream(KemmMqStreamDto dto);
-
-    default KemmStreamDto mapToDto(KemmStream stream) {
-        if (stream instanceof KemmMqStream) {
-            return toMqStreamDto((KemmMqStream) stream);
-        }
-        return toDto(stream);
-    }
-
-    @Named("mapManagerIdToKemmMqManager")
-    default KemmMqManager mapManagerIdToKemmMqManager(Long managerId) {
-        if (managerId == null) {
-            return null;
-        }
-        KemmMqManager manager = new KemmMqManager();
-        manager.setId(managerId);
-        return manager;
-    }
-
-    default KemmStream toKemmStream(KemmStreamDto dto) {
-        switch (dto.getType()) {
-            case "MQ":
-                return toKemmMqStream((KemmMqStreamDto) dto);
-            default:
-                throw new IllegalArgumentException("Unknown stream type: " + dto.getType());
-        }
-    }
-}
+paths:
+  /mq-managers:
+    get:
+      summary: Récupérer tous les MQ Managers
+      operationId: getAllMqManagers
+      responses:
+        '200':
+          description: Liste des MQ Managers récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/KemmMqManagerDto'
+        '500':
+          description: Erreur serveur interne
