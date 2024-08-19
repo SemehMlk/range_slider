@@ -1,13 +1,36 @@
-@Mapper(componentModel = "spring")
-public interface StreamMapper {
+public class StreamBuilder {
 
-    @Mapping(source = "upStreamQueue", target = "upStreamQueue", ignore = true) // ignore si non applicable
-    @Mapping(source = "downStreamQueue", target = "downStreamQueue", ignore = true)
-    @Mapping(source = "replyToDownStreamQueue", target = "replyToDownStreamQueue", ignore = true)
-    StreamDto toDto(KemmStream stream);
+    private final KemmStreamDto streamDto;
 
-    @Mapping(source = "upStreamQueue", target = "upStreamQueue")
-    @Mapping(source = "downStreamQueue", target = "downStreamQueue")
-    @Mapping(source = "replyToDownStreamQueue", target = "replyToDownStreamQueue")
-    StreamDto toDto(KemmMqStream mqStream);
+    public StreamBuilder(KemmStreamDto streamDto) {
+        this.streamDto = streamDto;
+    }
+
+    public KemmStream build() {
+        if ("MQ".equalsIgnoreCase(streamDto.getType())) {
+            KemmMqStream mqStream = new KemmMqStream();
+            mqStream.setAlias(streamDto.getAlias());
+            mqStream.setType(streamDto.getType());
+            mqStream.setDescription(streamDto.getDescription());
+            mqStream.setStatus(streamDto.getStatus());
+            mqStream.setInputMessageType(streamDto.getInputMessageType());
+            mqStream.setUpStreamQueue(((KemmMqStreamDto) streamDto).getUpStreamQueue());
+            mqStream.setDownStreamQueue(((KemmMqStreamDto) streamDto).getDownStreamQueue());
+            mqStream.setReplyToDownStreamQueue(((KemmMqStreamDto) streamDto).getReplyToDownStreamQueue());
+
+            // Map KemmMqManagerDto to KemmMqManager entity
+            KemmMqManager manager = new KemmMqManager();
+            manager.setChannel(((KemmMqStreamDto) streamDto).getKemmMqManager().getChannel());
+            manager.setHost(((KemmMqStreamDto) streamDto).getKemmMqManager().getHost());
+            manager.setMqUser(((KemmMqStreamDto) streamDto).getKemmMqManager().getMqUser());
+            manager.setMqPassword(((KemmMqStreamDto) streamDto).getKemmMqManager().getMqPassword());
+            manager.setPort(((KemmMqStreamDto) streamDto).getKemmMqManager().getPort());
+
+            mqStream.setKemmMqManagerSource(manager);
+
+            return mqStream;
+        } 
+        // Ajouter ici d'autres types de streams si nécessaire
+        throw new IllegalArgumentException("Invalid stream type: " + streamDto.getType());
+    }
 }
