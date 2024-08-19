@@ -1,36 +1,41 @@
-public class StreamBuilder {
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
-    private final KemmStreamDto streamDto;
+@Mapper(componentModel = "spring")
+public interface StreamMapper {
 
-    public StreamBuilder(KemmStreamDto streamDto) {
-        this.streamDto = streamDto;
+    KemmStreamDto toDto(KemmStream stream);
+
+    @Mapping(source = "kemmMqManagerSource.id", target = "managerId")
+    KemmMqStreamDto toMqStreamDto(KemmMqStream stream);
+
+    @Mapping(source = "managerId", target = "kemmMqManagerSource", qualifiedByName = "mapManagerIdToKemmMqManager")
+    KemmMqStream toKemmMqStream(KemmMqStreamDto dto);
+
+    default KemmStreamDto mapToDto(KemmStream stream) {
+        if (stream instanceof KemmMqStream) {
+            return toMqStreamDto((KemmMqStream) stream);
+        }
+        return toDto(stream);
     }
 
-    public KemmStream build() {
-        if ("MQ".equalsIgnoreCase(streamDto.getType())) {
-            KemmMqStream mqStream = new KemmMqStream();
-            mqStream.setAlias(streamDto.getAlias());
-            mqStream.setType(streamDto.getType());
-            mqStream.setDescription(streamDto.getDescription());
-            mqStream.setStatus(streamDto.getStatus());
-            mqStream.setInputMessageType(streamDto.getInputMessageType());
-            mqStream.setUpStreamQueue(((KemmMqStreamDto) streamDto).getUpStreamQueue());
-            mqStream.setDownStreamQueue(((KemmMqStreamDto) streamDto).getDownStreamQueue());
-            mqStream.setReplyToDownStreamQueue(((KemmMqStreamDto) streamDto).getReplyToDownStreamQueue());
+    @Named("mapManagerIdToKemmMqManager")
+    default KemmMqManager mapManagerIdToKemmMqManager(Long managerId) {
+        if (managerId == null) {
+            return null;
+        }
+        KemmMqManager manager = new KemmMqManager();
+        manager.setId(managerId);
+        return manager;
+    }
 
-            // Map KemmMqManagerDto to KemmMqManager entity
-            KemmMqManager manager = new KemmMqManager();
-            manager.setChannel(((KemmMqStreamDto) streamDto).getKemmMqManager().getChannel());
-            manager.setHost(((KemmMqStreamDto) streamDto).getKemmMqManager().getHost());
-            manager.setMqUser(((KemmMqStreamDto) streamDto).getKemmMqManager().getMqUser());
-            manager.setMqPassword(((KemmMqStreamDto) streamDto).getKemmMqManager().getMqPassword());
-            manager.setPort(((KemmMqStreamDto) streamDto).getKemmMqManager().getPort());
-
-            mqStream.setKemmMqManagerSource(manager);
-
-            return mqStream;
-        } 
-        // Ajouter ici d'autres types de streams si nécessaire
-        throw new IllegalArgumentException("Invalid stream type: " + streamDto.getType());
+    default KemmStream toKemmStream(KemmStreamDto dto) {
+        switch (dto.getType()) {
+            case "MQ":
+                return toKemmMqStream((KemmMqStreamDto) dto);
+            default:
+                throw new IllegalArgumentException("Unknown stream type: " + dto.getType());
+        }
     }
 }
