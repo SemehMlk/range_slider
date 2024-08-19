@@ -1,62 +1,138 @@
-import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.mapstruct.factory.Mappers;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+class StreamMapperTest {
 
-class StreamsServiceTest {
-
-    @Mock
-    private StreamRepository streamRepository;
-
-    @Mock
     private StreamMapper streamMapper;
-
-    @InjectMocks
-    private StreamsService streamsService;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
+        streamMapper = Mappers.getMapper(StreamMapper.class);
     }
 
     @Test
-    void testGetAllStreams() {
-        KemmStream genericStream = mock(KemmStream.class);
-        KemmStreamDto genericStreamDto = new KemmStreamDto();
-        when(streamRepository.findAll()).thenReturn(Arrays.asList(genericStream));
-        when(streamMapper.mapToDto(genericStream)).thenReturn(genericStreamDto);
-
-        ResponseEntity<List<KemmStreamDto>> response = streamsService.getAllStreams();
-
-        assertNotNull(response);
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1, response.getBody().size());
-    }
-
-    @Test
-    void testCreateStream() {
+    void testKemmMqStreamDtoToEntity() {
         KemmMqStreamDto mqStreamDto = new KemmMqStreamDto();
         mqStreamDto.setAlias("MQ_Test");
         mqStreamDto.setType("MQ");
+        mqStreamDto.setUpStreamQueue("DEV.QUEUE.UP");
+        mqStreamDto.setDownStreamQueue("DEV.QUEUE.DOWN");
+        mqStreamDto.setManagerId(1L);
 
-        KemmMqStream mqStream = mock(KemmMqStream.class);
-        when(streamMapper.toKemmStream(mqStreamDto)).thenReturn(mqStream);
-        when(streamRepository.save(mqStream)).thenReturn(mqStream);
-        when(streamMapper.mapToDto(mqStream)).thenReturn(mqStreamDto);
+        KemmMqStream mqStream = streamMapper.toKemmMqStream(mqStreamDto);
 
-        ResponseEntity<KemmStreamDto> response = streamsService.createStream(mqStreamDto);
+        assertNotNull(mqStream);
+        assertEquals("MQ_Test", mqStream.getAlias());
+        assertEquals("DEV.QUEUE.UP", mqStream.getUpStreamQueue());
+        assertNotNull(mqStream.getKemmMqManagerSource());
+        assertEquals(1L, mqStream.getKemmMqManagerSource().getId());
+    }
 
-        assertNotNull(response);
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        assertEquals("MQ_Test", response.getBody().getAlias());
+    @Test
+    void testKemmMqStreamEntityToDto() {
+        KemmMqManager manager = new KemmMqManager();
+        manager.setId(1L);
+
+        KemmMqStream mqStream = new KemmMqStream();
+        mqStream.setAlias("MQ_Test");
+        mqStream.setType("MQ");
+        mqStream.setUpStreamQueue("DEV.QUEUE.UP");
+        mqStream.setDownStreamQueue("DEV.QUEUE.DOWN");
+        mqStream.setKemmMqManagerSource(manager);
+
+        KemmMqStreamDto mqStreamDto = streamMapper.toMqStreamDto(mqStream);
+
+        assertNotNull(mqStreamDto);
+        assertEquals("MQ_Test", mqStreamDto.getAlias());
+        assertEquals("DEV.QUEUE.UP", mqStreamDto.getUpStreamQueue());
+        assertEquals(1L, mqStreamDto.getManagerId());
+    }
+
+    @Test
+    void testGenericStreamEntityToDto() {
+        KemmStream genericStream = new KemmStream() {
+            @Override
+            public String getType() {
+                return "GENERIC";
+            }
+        };
+        genericStream.setAlias("Generic_Test");
+
+        KemmStreamDto streamDto = streamMapper.toDto(genericStream);
+
+        assertNotNull(streamDto);
+        assertEquals("Generic_Test", streamDto.getAlias());
+        assertEquals("GENERIC", streamDto.getType());
+    }
+
+    @Test
+    void testMapToDtoWithKemmMqStream() {
+        KemmMqManager manager = new KemmMqManager();
+        manager.setId(1L);
+
+        KemmMqStream mqStream = new KemmMqStream();
+        mqStream.setAlias("MQ_Test");
+        mqStream.setType("MQ");
+        mqStream.setUpStreamQueue("DEV.QUEUE.UP");
+        mqStream.setDownStreamQueue("DEV.QUEUE.DOWN");
+        mqStream.setKemmMqManagerSource(manager);
+
+        KemmStreamDto streamDto = streamMapper.mapToDto(mqStream);
+
+        assertNotNull(streamDto);
+        assertTrue(streamDto instanceof KemmMqStreamDto);
+        assertEquals("MQ_Test", streamDto.getAlias());
+        assertEquals("MQ", streamDto.getType());
+    }
+
+    @Test
+    void testMapToDtoWithGenericStream() {
+        KemmStream genericStream = new KemmStream() {
+            @Override
+            public String getType() {
+                return "GENERIC";
+            }
+        };
+        genericStream.setAlias("Generic_Test");
+
+        KemmStreamDto streamDto = streamMapper.mapToDto(genericStream);
+
+        assertNotNull(streamDto);
+        assertEquals("Generic_Test", streamDto.getAlias());
+        assertEquals("GENERIC", streamDto.getType());
+    }
+
+    @Test
+    void testToKemmStreamWithKemmMqStreamDto() {
+        KemmMqStreamDto mqStreamDto = new KemmMqStreamDto();
+        mqStreamDto.setAlias("MQ_Test");
+        mqStreamDto.setType("MQ");
+        mqStreamDto.setUpStreamQueue("DEV.QUEUE.UP");
+        mqStreamDto.setDownStreamQueue("DEV.QUEUE.DOWN");
+        mqStreamDto.setManagerId(1L);
+
+        KemmStream stream = streamMapper.toKemmStream(mqStreamDto);
+
+        assertNotNull(stream);
+        assertTrue(stream instanceof KemmMqStream);
+        assertEquals("MQ_Test", stream.getAlias());
+    }
+
+    @Test
+    void testMapManagerIdToKemmMqManager() {
+        Long managerId = 1L;
+        KemmMqManager manager = streamMapper.mapManagerIdToKemmMqManager(managerId);
+
+        assertNotNull(manager);
+        assertEquals(1L, manager.getId());
+    }
+
+    @Test
+    void testMapManagerIdToKemmMqManagerWithNull() {
+        KemmMqManager manager = streamMapper.mapManagerIdToKemmMqManager(null);
+
+        assertNull(manager);
     }
 }
