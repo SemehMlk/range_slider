@@ -1,37 +1,8 @@
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.NullValuePropertyMappingStrategy;
-
-@Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-public interface StreamMapper {
-
-    KemmStreamDto toDto(KemmStream stream);
-
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "creationDate", ignore = true)
-    @Mapping(target = "type", ignore = true)
-    @Mapping(target = "updateDate", ignore = true)
-    void updateEntityFromDto(KemmStreamDto dto, @MappingTarget KemmStream entity);
-
-    @Mapping(source = "kemmMqManagerSource.id", target = "managerId")
-    KemmMqStreamDto toMqStreamDto(KemmMqStream stream);
-
-    @Mapping(source = "managerId", target = "kemmMqManagerSource", qualifiedByName = "mapManagerIdToKemmMqManager")
-    KemmMqStream toKemmMqStream(KemmMqStreamDto dto);
-
-    default KemmStreamDto mapToDto(KemmStream stream) {
-        if (stream instanceof KemmMqStream) {
-            return toMqStreamDto((KemmMqStream) stream);
-        }
-        return toDto(stream);
-    }
-
-    default KemmStream toKemmStream(KemmStreamDto dto) {
-        switch (dto.getType()) {
-            case "MQ":
-                return toKemmMqStream((KemmMqStreamDto) dto);
-            default:
-                throw new IllegalArgumentException("Unknown stream type: " + dto.getType());
+   default void updateEntityFromDto(KemmStreamDto dto, @MappingTarget KemmStream entity) {
+        if (entity instanceof KemmMqStream && dto instanceof KemmMqStreamDto) {
+            updateMqStreamFromDto((KemmMqStreamDto) dto, (KemmMqStream) entity);
+        } else {
+            // This part must also handle the generic fields if it's not MQStream
+            org.mapstruct.factory.Mappers.getMapper(StreamMapper.class).updateEntityFromDto(dto, entity);
         }
     }
-}
