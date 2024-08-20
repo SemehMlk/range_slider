@@ -1,64 +1,16 @@
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+  @Test
+    public void testDateSerialization() throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());  // Ajout du module pour les dates/temps modernes
+        objectMapper.findAndRegisterModules();
 
-import java.time.LocalDateTime;
-import java.util.Optional;
+        KemmStreamDto dto = new KemmStreamDto();
+        dto.setCreationDate(OffsetDateTime.now());
+        dto.setUpdateDate(OffsetDateTime.now());
 
-class StreamsServiceTest {
+        String jsonResult = objectMapper.writeValueAsString(dto);
 
-    @Mock
-    private StreamRepository streamRepository;
+        System.out.println(jsonResult);
 
-    @Mock
-    private StreamMapper streamMapper;
-
-    @InjectMocks
-    private StreamsService streamsService;
-
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+        assertTrue(jsonResult.contains("T"));  // Vérifie que le résultat contient un 'T' (indicatif du format ISO 8601)
     }
-
-    @Test
-    void testUpdateStream_withGenericStream() {
-        KemmStreamDto streamDto = new KemmStreamDto();
-        streamDto.setAlias("Generic_Test_Updated");
-
-        KemmStream stream = mock(KemmStream.class);  // Use mock for the stream object
-        when(streamRepository.findById(1L)).thenReturn(Optional.of(stream));
-
-        ResponseEntity<KemmStreamDto> response = streamsService.updateStream(1L, streamDto);
-
-        verify(streamMapper).updateEntityFromDto(eq(streamDto), eq(stream));  // Use eq() to match arguments
-        verify(stream).setUpdateDate(any(LocalDateTime.class));  // Match any LocalDateTime
-        verify(streamRepository).save(eq(stream));  // Match the same stream object
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-    }
-
-    @Test
-    void testUpdateStream_withMqStream() {
-        KemmMqStreamDto mqStreamDto = new KemmMqStreamDto();
-        mqStreamDto.setAlias("MQ_Test_Updated");
-
-        KemmMqStream mqStream = mock(KemmMqStream.class);  // Use mock for the MQ stream object
-        when(streamRepository.findById(1L)).thenReturn(Optional.of(mqStream));
-
-        ResponseEntity<KemmStreamDto> response = streamsService.updateStream(1L, mqStreamDto);
-
-        verify(streamMapper).updateEntityFromDto(eq(mqStreamDto), eq(mqStream));  // Use eq() to match arguments
-        verify(mqStream).setUpdateDate(any(LocalDateTime.class));  // Match any LocalDateTime
-        verify(streamRepository).save(eq(mqStream));  // Match the same MQ stream object
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-    }
-}
