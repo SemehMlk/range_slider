@@ -1,16 +1,3 @@
-  @Test
-    public void testDateSerialization() throws JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());  // Ajout du module pour les dates/temps modernes
-        objectMapper.findAndRegisterModules();
-
-        KemmStreamDto dto = new KemmStreamDto();
-        dto.setCreationDate(OffsetDateTime.now());
-        dto.setUpdateDate(OffsetDateTime.now());
-
-        String jsonResult = objectMapper.writeValueAsString(dto);
-
-        System.out.println(jsonResult);
-
-        assertTrue(jsonResult.contains("T"));  // Vérifie que le résultat contient un 'T' (indicatif du format ISO 8601)
-    }
+    @Mapping(source = "creationDate", target = "creationDate", qualifiedByName = "formatDateTime")
+    @Mapping(source = "updateDate", target = "updateDate", qualifiedByName = "formatDateTime")
+    KemmStreamDto toDto(KemmStream stream);
