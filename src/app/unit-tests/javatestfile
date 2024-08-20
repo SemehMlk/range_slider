@@ -1,8 +1,87 @@
-   default void updateEntityFromDto(KemmStreamDto dto, @MappingTarget KemmStream entity) {
-        if (entity instanceof KemmMqStream && dto instanceof KemmMqStreamDto) {
-            updateMqStreamFromDto((KemmMqStreamDto) dto, (KemmMqStream) entity);
-        } else {
-            // This part must also handle the generic fields if it's not MQStream
-            org.mapstruct.factory.Mappers.getMapper(StreamMapper.class).updateEntityFromDto(dto, entity);
-        }
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
+
+class StreamMapperTest {
+
+    private StreamMapper streamMapper;
+
+    @BeforeEach
+    void setUp() {
+        streamMapper = Mappers.getMapper(StreamMapper.class);
     }
+
+    @Test
+    void testUpdateEntityFields() {
+        KemmStreamDto streamDto = new KemmStreamDto();
+        streamDto.setAlias("Generic_Test_Updated");
+        streamDto.setDescription("Updated Description");
+
+        KemmStream stream = new KemmStream() {
+            @Override
+            public String getType() {
+                return "GENERIC";
+            }
+        };
+        stream.setAlias("Generic_Test");
+
+        streamMapper.updateEntityFields(streamDto, stream);
+
+        assertEquals("Generic_Test_Updated", stream.getAlias());
+        assertEquals("Updated Description", stream.getDescription());
+    }
+
+    @Test
+    void testUpdateMqStreamFromDto() {
+        KemmMqStreamDto mqStreamDto = new KemmMqStreamDto();
+        mqStreamDto.setAlias("MQ_Test_Updated");
+        mqStreamDto.setUpStreamQueue("DEV.QUEUE.UPDATED");
+        mqStreamDto.setManagerId(2L);
+
+        KemmMqStream mqStream = new KemmMqStream();
+        mqStream.setAlias("MQ_Test");
+        mqStream.setUpStreamQueue("DEV.QUEUE.UP");
+
+        streamMapper.updateMqStreamFromDto(mqStreamDto, mqStream);
+
+        assertEquals("MQ_Test_Updated", mqStream.getAlias());
+        assertEquals("DEV.QUEUE.UPDATED", mqStream.getUpStreamQueue());
+        assertNotNull(mqStream.getKemmMqManagerSource());
+        assertEquals(2L, mqStream.getKemmMqManagerSource().getId());
+    }
+
+    @Test
+    void testUpdateEntityFromDto_withGenericStream() {
+        KemmStreamDto streamDto = new KemmStreamDto();
+        streamDto.setAlias("Generic_Test_Updated");
+
+        KemmStream stream = new KemmStream() {
+            @Override
+            public String getType() {
+                return "GENERIC";
+            }
+        };
+        stream.setAlias("Generic_Test");
+
+        streamMapper.updateEntityFromDto(streamDto, stream);
+
+        assertEquals("Generic_Test_Updated", stream.getAlias());
+    }
+
+    @Test
+    void testUpdateEntityFromDto_withMqStream() {
+        KemmMqStreamDto mqStreamDto = new KemmMqStreamDto();
+        mqStreamDto.setAlias("MQ_Test_Updated");
+        mqStreamDto.setUpStreamQueue("DEV.QUEUE.UPDATED");
+
+        KemmMqStream mqStream = new KemmMqStream();
+        mqStream.setAlias("MQ_Test");
+        mqStream.setUpStreamQueue("DEV.QUEUE.UP");
+
+        streamMapper.updateEntityFromDto(mqStreamDto, mqStream);
+
+        assertEquals("MQ_Test_Updated", mqStream.getAlias());
+        assertEquals("DEV.QUEUE.UPDATED", mqStream.getUpStreamQueue());
+    }
+}
