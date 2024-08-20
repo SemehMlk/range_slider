@@ -1,3 +1,10 @@
-   @Mapping(target = "creationDate", source = "creationDate")
-    @Mapping(target = "updateDate", source = "updateDate")
-    KemmStreamDto toDto(KemmStream stream);
+   default KemmStream toKemmStream(StreamDto dto) {
+        if (dto == null) {
+            throw new IllegalArgumentException("StreamDto cannot be null");
+        }
+        if ("MQ".equals(dto.getType())) {
+            return toKemmMqStream((MqStreamDto) dto);
+        } else {
+            throw new IllegalArgumentException("Unknown stream type: " + dto.getType());
+        }
+    }
