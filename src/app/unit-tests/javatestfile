@@ -1,15 +1,7 @@
-<changeSet author="KEMM-DEV-TEAM" id="drop_fk_inbound_jms_message_source_partner">
-    <dropForeignKeyConstraint baseTableName="t_kemm_inbound_jms_message_source" constraintName="fk_inbound_jms_message_source__partner"/>
+<changeSet author="KEMM-DEV-TEAM" id="drop_kemm_partner_pkey">
+    <dropPrimaryKey tableName="t_kemm_stream" constraintName="kemm_partner_pkey"/>
 </changeSet>
 
-
-<changeSet author="KEMM-DEV-TEAM" id="create_fk_inbound_jms_message_source_stream">
-    <addForeignKeyConstraint 
-        baseColumnNames="stream_id" 
-        baseTableName="t_kemm_inbound_jms_message_source"
-        constraintName="fk_inbound_jms_message_source__stream" 
-        initiallyDeferred="false" 
-        referencedColumnNames="stream_id" 
-        referencedTableName="t_kemm_mq_stream" 
-        validate="true"/>
+<changeSet author="KEMM-DEV-TEAM" id="create_kemm_stream_pkey">
+    <addPrimaryKey columnNames="id" constraintName="kemm_stream_pkey" tableName="t_kemm_stream"/>
 </changeSet>
