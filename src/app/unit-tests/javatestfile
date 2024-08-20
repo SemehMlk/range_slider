@@ -1,7 +1,37 @@
-<changeSet author="KEMM-DEV-TEAM" id="drop_kemm_partner_pkey">
-    <dropPrimaryKey tableName="t_kemm_stream" constraintName="kemm_partner_pkey"/>
-</changeSet>
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 
-<changeSet author="KEMM-DEV-TEAM" id="create_kemm_stream_pkey">
-    <addPrimaryKey columnNames="id" constraintName="kemm_stream_pkey" tableName="t_kemm_stream"/>
-</changeSet>
+@Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+public interface StreamMapper {
+
+    KemmStreamDto toDto(KemmStream stream);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "creationDate", ignore = true)
+    @Mapping(target = "type", ignore = true)
+    @Mapping(target = "updateDate", ignore = true)
+    void updateEntityFromDto(KemmStreamDto dto, @MappingTarget KemmStream entity);
+
+    @Mapping(source = "kemmMqManagerSource.id", target = "managerId")
+    KemmMqStreamDto toMqStreamDto(KemmMqStream stream);
+
+    @Mapping(source = "managerId", target = "kemmMqManagerSource", qualifiedByName = "mapManagerIdToKemmMqManager")
+    KemmMqStream toKemmMqStream(KemmMqStreamDto dto);
+
+    default KemmStreamDto mapToDto(KemmStream stream) {
+        if (stream instanceof KemmMqStream) {
+            return toMqStreamDto((KemmMqStream) stream);
+        }
+        return toDto(stream);
+    }
+
+    default KemmStream toKemmStream(KemmStreamDto dto) {
+        switch (dto.getType()) {
+            case "MQ":
+                return toKemmMqStream((KemmMqStreamDto) dto);
+            default:
+                throw new IllegalArgumentException("Unknown stream type: " + dto.getType());
+        }
+    }
+}
