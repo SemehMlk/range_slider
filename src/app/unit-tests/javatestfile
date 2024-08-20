@@ -1,58 +1,33 @@
+import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mapstruct.factory.Mappers;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
-class StreamMapperTest {
+import java.time.LocalDateTime;
 
+class StreamsServiceTest {
+
+    @Mock
+    private StreamRepository streamRepository;
+
+    @Mock
     private StreamMapper streamMapper;
+
+    @InjectMocks
+    private StreamsService streamsService;
 
     @BeforeEach
     void setUp() {
-        streamMapper = Mappers.getMapper(StreamMapper.class);
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    void testUpdateEntityFields() {
-        KemmStreamDto streamDto = new KemmStreamDto();
-        streamDto.setAlias("Generic_Test_Updated");
-        streamDto.setDescription("Updated Description");
-
-        KemmStream stream = new KemmStream() {
-            @Override
-            public String getType() {
-                return "GENERIC";
-            }
-        };
-        stream.setAlias("Generic_Test");
-
-        streamMapper.updateEntityFields(streamDto, stream);
-
-        assertEquals("Generic_Test_Updated", stream.getAlias());
-        assertEquals("Updated Description", stream.getDescription());
-    }
-
-    @Test
-    void testUpdateMqStreamFromDto() {
-        KemmMqStreamDto mqStreamDto = new KemmMqStreamDto();
-        mqStreamDto.setAlias("MQ_Test_Updated");
-        mqStreamDto.setUpStreamQueue("DEV.QUEUE.UPDATED");
-        mqStreamDto.setManagerId(2L);
-
-        KemmMqStream mqStream = new KemmMqStream();
-        mqStream.setAlias("MQ_Test");
-        mqStream.setUpStreamQueue("DEV.QUEUE.UP");
-
-        streamMapper.updateMqStreamFromDto(mqStreamDto, mqStream);
-
-        assertEquals("MQ_Test_Updated", mqStream.getAlias());
-        assertEquals("DEV.QUEUE.UPDATED", mqStream.getUpStreamQueue());
-        assertNotNull(mqStream.getKemmMqManagerSource());
-        assertEquals(2L, mqStream.getKemmMqManagerSource().getId());
-    }
-
-    @Test
-    void testUpdateEntityFromDto_withGenericStream() {
+    void testUpdateStream_withGenericStream() {
         KemmStreamDto streamDto = new KemmStreamDto();
         streamDto.setAlias("Generic_Test_Updated");
 
@@ -62,26 +37,33 @@ class StreamMapperTest {
                 return "GENERIC";
             }
         };
-        stream.setAlias("Generic_Test");
+        when(streamRepository.findById(1L)).thenReturn(Optional.of(stream));
 
-        streamMapper.updateEntityFromDto(streamDto, stream);
+        ResponseEntity<KemmStreamDto> response = streamsService.updateStream(1L, streamDto);
 
-        assertEquals("Generic_Test_Updated", stream.getAlias());
+        verify(streamMapper).updateEntityFromDto(streamDto, stream);
+        verify(stream).setUpdateDate(any(LocalDateTime.class));
+        verify(streamRepository).save(stream);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 
     @Test
-    void testUpdateEntityFromDto_withMqStream() {
+    void testUpdateStream_withMqStream() {
         KemmMqStreamDto mqStreamDto = new KemmMqStreamDto();
         mqStreamDto.setAlias("MQ_Test_Updated");
-        mqStreamDto.setUpStreamQueue("DEV.QUEUE.UPDATED");
 
         KemmMqStream mqStream = new KemmMqStream();
         mqStream.setAlias("MQ_Test");
-        mqStream.setUpStreamQueue("DEV.QUEUE.UP");
 
-        streamMapper.updateEntityFromDto(mqStreamDto, mqStream);
+        when(streamRepository.findById(1L)).thenReturn(Optional.of(mqStream));
 
-        assertEquals("MQ_Test_Updated", mqStream.getAlias());
-        assertEquals("DEV.QUEUE.UPDATED", mqStream.getUpStreamQueue());
+        ResponseEntity<KemmStreamDto> response = streamsService.updateStream(1L, mqStreamDto);
+
+        verify(streamMapper).updateEntityFromDto(mqStreamDto, mqStream);
+        verify(mqStream).setUpdateDate(any(LocalDateTime.class));
+        verify(streamRepository).save(mqStream);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
     }
 }
