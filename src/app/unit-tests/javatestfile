@@ -1,21 +1,28 @@
-export function AutoUnsubscribe(blackList: string[] = []) {
+export function AutoUnsubscribe() {
   return function (constructor: Function) {
     const originalNgOnDestroy = constructor.prototype.ngOnDestroy;
 
     constructor.prototype.ngOnDestroy = function () {
-      for (const prop in this) {
-        if (this.hasOwnProperty(prop) && !blackList.includes(prop)) {
-          const property = this[prop];
-          if (property && typeof property.unsubscribe === 'function') {
-            property.unsubscribe();
-          }
-        }
+      if (this.__subscriptions) {
+        this.__subscriptions.forEach((sub: Subscription) => sub.unsubscribe());
       }
 
-      // Appeler l'original ngOnDestroy s'il existe
       if (originalNgOnDestroy && typeof originalNgOnDestroy === 'function') {
         originalNgOnDestroy.apply(this, arguments);
       }
+    };
+
+    const originalSubscribe = constructor.prototype.subscribe;
+
+    constructor.prototype.subscribe = function(...args) {
+      if (!this.__subscriptions) {
+        this.__subscriptions = [];
+      }
+
+      const subscription = originalSubscribe.apply(this, args);
+      this.__subscriptions.push(subscription);
+
+      return subscription;
     };
   };
 }
