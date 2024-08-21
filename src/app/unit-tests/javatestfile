@@ -1,10 +1,21 @@
-   default KemmStream toKemmStream(StreamDto dto) {
-        if (dto == null) {
-            throw new IllegalArgumentException("StreamDto cannot be null");
+export function AutoUnsubscribe(blackList: string[] = []) {
+  return function (constructor: Function) {
+    const originalNgOnDestroy = constructor.prototype.ngOnDestroy;
+
+    constructor.prototype.ngOnDestroy = function () {
+      for (const prop in this) {
+        if (this.hasOwnProperty(prop) && !blackList.includes(prop)) {
+          const property = this[prop];
+          if (property && typeof property.unsubscribe === 'function') {
+            property.unsubscribe();
+          }
         }
-        if ("MQ".equals(dto.getType())) {
-            return toKemmMqStream((MqStreamDto) dto);
-        } else {
-            throw new IllegalArgumentException("Unknown stream type: " + dto.getType());
-        }
-    }
+      }
+
+      // Appeler l'original ngOnDestroy s'il existe
+      if (originalNgOnDestroy && typeof originalNgOnDestroy === 'function') {
+        originalNgOnDestroy.apply(this, arguments);
+      }
+    };
+  };
+}
