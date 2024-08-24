@@ -1,28 +1,80 @@
-export function AutoUnsubscribe() {
-  return function (constructor: Function) {
-    const originalNgOnDestroy = constructor.prototype.ngOnDestroy;
+import { Component, OnInit } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { GridApi } from 'ag-grid-community';
+import { ELAPSED_TIME_QUICK_FILTER, ELAPSED_TIME_ENUM, STATUSES_FILTERS, TRANSLATION_STATUS_QUICK_FILTERS, GLOBAL_STATUS_QUICK_FILTERS } from './constants'; // Importez vos constantes
 
-    constructor.prototype.ngOnDestroy = function () {
-      if (this.__subscriptions) {
-        this.__subscriptions.forEach((sub: Subscription) => sub.unsubscribe());
-      }
-
-      if (originalNgOnDestroy && typeof originalNgOnDestroy === 'function') {
-        originalNgOnDestroy.apply(this, arguments);
-      }
-    };
-
-    const originalSubscribe = constructor.prototype.subscribe;
-
-    constructor.prototype.subscribe = function(...args) {
-      if (!this.__subscriptions) {
-        this.__subscriptions = [];
-      }
-
-      const subscription = originalSubscribe.apply(this, args);
-      this.__subscriptions.push(subscription);
-
-      return subscription;
-    };
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
+})
+export class DashboardComponent implements OnInit {
+  private gridApi!: GridApi;
+  selectedPeriod = ELAPSED_TIME_ENUM.LAST_24_HOURS; // Valeur par défaut
+  selectedStatuses: { [key: string]: boolean } = {
+    SUCCESS: false,
+    PROCESSING: false,
+    PARTIAL: false,
+    FAILED: false
   };
+
+  constructor(private http: HttpClient) {}
+
+  ngOnInit(): void {
+    this.applyQuickFilters();
+  }
+
+  onGridReady(params: any) {
+    this.gridApi = params.api;
+  }
+
+  applyQuickFilters() {
+    const timeFilter = ELAPSED_TIME_QUICK_FILTER[this.selectedPeriod];
+
+    // Construire les critères de filtres selon les statuts sélectionnés
+    const globalStatusCriteria = { ...GLOBAL_STATUS_QUICK_FILTERS };
+    const translationStatusCriteria = { ...TRANSLATION_STATUS_QUICK_FILTERS };
+
+    // Ajout des options en fonction des statuts sélectionnés
+    globalStatusCriteria.options = [];
+    translationStatusCriteria.options = [];
+
+    if (this.selectedStatuses.SUCCESS) {
+      globalStatusCriteria.options.push(...STATUSES_FILTERS.SUCCESS);
+    }
+    if (this.selectedStatuses.PARTIAL) {
+      globalStatusCriteria.options.push(...STATUSES_FILTERS.PARTIAL);
+    }
+    if (this.selectedStatuses.FAILED) {
+      globalStatusCriteria.options.push(...STATUSES_FILTERS.FAILED);
+    }
+    if (this.selectedStatuses.PROCESSING) {
+      translationStatusCriteria.options.push(...STATUSES_FILTERS.PROCESSING);
+    }
+
+    // Créer la payload en fonction des critères sélectionnés
+    const payload = {
+      timeCriteria: timeFilter,
+      globalStatusCriteria: globalStatusCriteria.options.length ? globalStatusCriteria : null,
+      translationStatusCriteria: translationStatusCriteria.options.length ? translationStatusCriteria : null,
+    };
+
+    this.fetchFilteredDataFromBackend(payload);
+  }
+
+  fetchFilteredDataFromBackend(payload: any) {
+    this.http.post('/api/data', payload).subscribe((response: any) => {
+      this.gridApi.setRowData(response.data);
+    });
+  }
+
+  onStatusChange(status: string) {
+    this.selectedStatuses[status] = !this.selectedStatuses[status];
+    this.applyQuickFilters();
+  }
+
+  onPeriodChange(newPeriod: string) {
+    this.selectedPeriod = newPeriod;
+    this.applyQuickFilters();
+  }
 }
