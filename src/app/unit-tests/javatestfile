@@ -1,97 +1,33 @@
-// filter-builder.ts
-
-export function buildBackendFilters(
-  filterModel: any,
-  fieldMapping: { [key: string]: string }
-): BackendFilter[] {
-  const backendFilters: BackendFilter[] = [];
-
-  for (const field in filterModel) {
-    if (filterModel.hasOwnProperty(field)) {
-      const filter = filterModel[field];
-      const backendField = fieldMapping[field] || field;
-
-      let backendFilter: BackendFilter = {
-        criteriaType: '',
-        searchField: {
-          fieldType: '',
-          field: backendField
-        }
-      };
-
-      switch (filter.filterType) {
-        case 'date':
-          backendFilter.criteriaType = 'IN_LAST_TIME_LAPSE';
-          backendFilter.searchField.fieldType = 'DATETIME';
-          backendFilter.timeLapse = filter.dateFrom;
-          backendFilter.timeUnit = 'DAY';
-          backendFilter.negated = filter.type === 'notEqual';
-          break;
-
-        case 'number':
-          backendFilter.criteriaType = 'IN_RANGE';
-          backendFilter.searchField.fieldType = 'NUMBER';
-          backendFilter.range = {
-            from: filter.filter,
-            to: filter.filterTo || null
-          };
-          backendFilter.negated = filter.type === 'notEqual';
-          break;
-
-        case 'text':
-          backendFilter.searchField.fieldType = 'STRING';
-          switch (filter.type) {
-            case 'contains':
-              backendFilter.criteriaType = 'CONTAINS';
-              backendFilter.searchValue = filter.filter;
-              backendFilter.negated = false;
-              break;
-            case 'notContains':
-              backendFilter.criteriaType = 'CONTAINS';
-              backendFilter.searchValue = filter.filter;
-              backendFilter.negated = true;
-              break;
-            case 'equals':
-              backendFilter.criteriaType = 'EQUALS';
-              backendFilter.searchValue = filter.filter;
-              backendFilter.negated = false;
-              break;
-            case 'notEqual':
-              backendFilter.criteriaType = 'EQUALS';
-              backendFilter.searchValue = filter.filter;
-              backendFilter.negated = true;
-              break;
-            case 'startsWith':
-              backendFilter.criteriaType = 'STARTS_WITH';
-              backendFilter.searchValue = filter.filter;
-              backendFilter.negated = false;
-              break;
-            case 'endsWith':
-              backendFilter.criteriaType = 'ENDS_WITH';
-              backendFilter.searchValue = filter.filter;
-              backendFilter.negated = false;
-              break;
-            default:
-              console.warn(`String filter type ${filter.type} is not handled`);
-              continue;
-          }
-          break;
-
-        case 'set':
-          backendFilter.criteriaType = 'IN_OPTIONS';
-          backendFilter.searchField.fieldType = 'ENUM';
-          backendFilter.options = filter.values;
-          backendFilter.negated = false;
-          break;
-
-        default:
-          console.warn(`Filter type ${filter.filterType} is not handled`);
-          continue;
-      }
-
-      backendFilters.push(backendFilter);
-    }
+case 'number':
+  backendFilter.searchField.fieldType = 'NUMBER';
+  switch (filter.type) {
+    case 'equals':
+      backendFilter.criteriaType = 'EQUALS';
+      backendFilter.range = { from: filter.filter, to: filter.filter };
+      backendFilter.negated = false;
+      break;
+    case 'notEqual':
+      backendFilter.criteriaType = 'EQUALS';
+      backendFilter.range = { from: filter.filter, to: filter.filter };
+      backendFilter.negated = true;
+      break;
+    case 'lessThan':
+      backendFilter.criteriaType = 'LESS_THAN';
+      backendFilter.range = { from: null, to: filter.filter };
+      backendFilter.negated = false;
+      break;
+    case 'greaterThan':
+      backendFilter.criteriaType = 'GREATER_THAN';
+      backendFilter.range = { from: filter.filter, to: null };
+      backendFilter.negated = false;
+      break;
+    case 'inRange':
+      backendFilter.criteriaType = 'IN_RANGE';
+      backendFilter.range = { from: filter.filter, to: filter.filterTo };
+      backendFilter.negated = false;
+      break;
+    default:
+      console.warn(`Number filter type ${filter.type} is not handled`);
+      continue;
   }
-
-  return backendFilters;
-}
+  break;
