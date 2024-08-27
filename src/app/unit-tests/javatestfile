@@ -1,33 +1,33 @@
-case 'number':
-  backendFilter.searchField.fieldType = 'NUMBER';
-  switch (filter.type) {
-    case 'equals':
-      backendFilter.criteriaType = 'EQUALS';
-      backendFilter.range = { from: filter.filter, to: filter.filter };
-      backendFilter.negated = false;
-      break;
-    case 'notEqual':
-      backendFilter.criteriaType = 'EQUALS';
-      backendFilter.range = { from: filter.filter, to: filter.filter };
-      backendFilter.negated = true;
-      break;
-    case 'lessThan':
-      backendFilter.criteriaType = 'LESS_THAN';
-      backendFilter.range = { from: null, to: filter.filter };
-      backendFilter.negated = false;
-      break;
-    case 'greaterThan':
-      backendFilter.criteriaType = 'GREATER_THAN';
-      backendFilter.range = { from: filter.filter, to: null };
-      backendFilter.negated = false;
-      break;
-    case 'inRange':
-      backendFilter.criteriaType = 'IN_RANGE';
-      backendFilter.range = { from: filter.filter, to: filter.filterTo };
-      backendFilter.negated = false;
-      break;
-    default:
-      console.warn(`Number filter type ${filter.type} is not handled`);
-      continue;
-  }
-  break;
+        case 'date':
+          backendFilter.searchField.fieldType = 'DATETIME';
+          switch (filter.type) {
+            case 'equals':
+              backendFilter.criteriaType = 'EQUALS';
+              backendFilter.range = { from: filter.dateFrom, to: filter.dateFrom };
+              backendFilter.negated = false;
+              break;
+            case 'notEqual':
+              backendFilter.criteriaType = 'EQUALS';
+              backendFilter.range = { from: filter.dateFrom, to: filter.dateFrom };
+              backendFilter.negated = true;
+              break;
+            case 'lessThan':
+              backendFilter.criteriaType = 'LESS_THAN';
+              backendFilter.range = { from: null, to: filter.dateFrom };
+              backendFilter.negated = false;
+              break;
+            case 'greaterThan':
+              backendFilter.criteriaType = 'GREATER_THAN';
+              backendFilter.range = { from: filter.dateFrom, to: null };
+              backendFilter.negated = false;
+              break;
+            case 'inRange':
+              backendFilter.criteriaType = 'IN_RANGE';
+              backendFilter.range = { from: filter.dateFrom, to: filter.dateTo };
+              backendFilter.negated = false;
+              break;
+            default:
+              console.warn(`Date filter type ${filter.type} is not handled`);
+              continue;
+          }
+          break;
