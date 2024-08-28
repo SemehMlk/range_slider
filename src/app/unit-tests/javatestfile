@@ -1,20 +1,32 @@
-{
-  headerName: 'Date Column',
-  field: 'dateField',
-  filter: 'agDateColumnFilter',
-  filterParams: {
-    comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
-      // Convertir la valeur de la cellule en objet Date
-      const cellDate = new Date(cellValue);
+comparator: (filterLocalDateAtMidnight: Date, cellValue: string) => {
+    // Convertir cellValue en objet Date
+    const cellDate = new Date(cellValue);
 
-      // Comparer les deux dates
-      if (cellDate < filterLocalDateAtMidnight) {
+    // Normaliser les deux dates à minuit, en ignorant les heures et fuseaux horaires
+    const filterDateAtMidnight = new Date(
+        filterLocalDateAtMidnight.getFullYear(),
+        filterLocalDateAtMidnight.getMonth(),
+        filterLocalDateAtMidnight.getDate()
+    );
+
+    const cellDateAtMidnight = new Date(
+        cellDate.getFullYear(),
+        cellDate.getMonth(),
+        cellDate.getDate()
+    );
+
+    console.log('Filter Date:', filterDateAtMidnight);
+    console.log('Cell Date:', cellDateAtMidnight);
+
+    // Comparaison
+    if (cellDateAtMidnight < filterDateAtMidnight) {
+        console.log('case1');
         return -1;
-      } else if (cellDate > filterLocalDateAtMidnight) {
+    } else if (cellDateAtMidnight > filterDateAtMidnight) {
+        console.log('case2');
         return 1;
-      } else {
+    } else {
+        console.log('case3');
         return 0;
-      }
     }
-  }
 }
