@@ -1,9 +1,9 @@
-comparator: (filterLocalDateAtMidnight: Date, cellValue: string, filterEndDateAtMidnight: Date) => {
+comparator: (filterLocalDateAtMidnight: Date, cellValue: string, filterModel: any) => {
     // Convertir cellValue en objet Date
     const cellDate = new Date(cellValue);
 
-    // Normaliser les dates à minuit, en ignorant les heures et fuseaux horaires
-    const filterStartDateAtMidnight = new Date(
+    // Normaliser les dates à minuit pour ignorer les heures et fuseaux horaires
+    const filterDateAtMidnight = new Date(
         filterLocalDateAtMidnight.getFullYear(),
         filterLocalDateAtMidnight.getMonth(),
         filterLocalDateAtMidnight.getDate()
@@ -15,22 +15,40 @@ comparator: (filterLocalDateAtMidnight: Date, cellValue: string, filterEndDateAt
         cellDate.getDate()
     );
 
-    const filterEndDate = new Date(
-        filterEndDateAtMidnight.getFullYear(),
-        filterEndDateAtMidnight.getMonth(),
-        filterEndDateAtMidnight.getDate()
-    );
+    // Détecter le type de filtre utilisé dans AG Grid
+    const filterType = filterModel.type;
 
-    console.log('Filter Start Date:', filterStartDateAtMidnight);
-    console.log('Filter End Date:', filterEndDate);
-    console.log('Cell Date:', cellDateAtMidnight);
-
-    // Comparaison
-    if (cellDateAtMidnight < filterStartDateAtMidnight) {
-        return -1;  // CellDate is before start date
-    } else if (cellDateAtMidnight > filterEndDate) {
-        return 1;   // CellDate is after end date
-    } else {
-        return 0;   // CellDate is within the range, inclusive of start and end dates
+    if (filterType === 'equals') {
+        // Vérifier si les dates sont égales
+        return cellDateAtMidnight.getTime() === filterDateAtMidnight.getTime() ? 0 : -1;
+    } else if (filterType === 'greaterThan') {
+        // Vérifier si la date de la cellule est après la date du filtre
+        return cellDateAtMidnight > filterDateAtMidnight ? 1 : -1;
+    } else if (filterType === 'greaterThanOrEqual') {
+        // Vérifier si la date de la cellule est après ou égale à la date du filtre
+        return cellDateAtMidnight >= filterDateAtMidnight ? 0 : -1;
+    } else if (filterType === 'lessThan') {
+        // Vérifier si la date de la cellule est avant la date du filtre
+        return cellDateAtMidnight < filterDateAtMidnight ? -1 : 1;
+    } else if (filterType === 'lessThanOrEqual') {
+        // Vérifier si la date de la cellule est avant ou égale à la date du filtre
+        return cellDateAtMidnight <= filterDateAtMidnight ? 0 : 1;
+    } else if (filterType === 'inRange') {
+        // Pour le filtre 'inRange', comparer avec les deux dates
+        const filterEndDateAtMidnight = new Date(
+            filterModel.dateTo.getFullYear(),
+            filterModel.dateTo.getMonth(),
+            filterModel.dateTo.getDate()
+        );
+        if (cellDateAtMidnight >= filterDateAtMidnight && cellDateAtMidnight <= filterEndDateAtMidnight) {
+            return 0;
+        } else if (cellDateAtMidnight < filterDateAtMidnight) {
+            return -1;
+        } else {
+            return 1;
+        }
     }
+
+    // Si aucun type de filtre n'est trouvé, retourner -1 par défaut
+    return -1;
 }
