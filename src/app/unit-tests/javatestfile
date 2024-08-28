@@ -1,41 +1,21 @@
-comparator: (filterDate: Date, cellValue: string) => {
-    // Convertir cellValue en objet Date
-    const cellDate = new Date(cellValue);
-
-    // Normaliser les dates à minuit pour ignorer les heures et fuseaux horaires
-    const filterDateAtMidnight = new Date(filterDate.getFullYear(), filterDate.getMonth(), filterDate.getDate());
-    const cellDateAtMidnight = new Date(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
-
-    // Comparaison simple
-    if (cellDateAtMidnight < filterDateAtMidnight) {
-        return -1;
-    } else if (cellDateAtMidnight > filterDateAtMidnight) {
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-
-
-comparator: (filterDate: Date, cellValue: string) => {
-    if (!cellValue) {
-        return -1;
-    }
-
-    // Convertir cellValue en objet Date
-    const cellDate = new Date(cellValue);
-
-    // Normaliser les deux dates à minuit
-    const filterDateAtMidnight = new Date(filterDate.setHours(0, 0, 0, 0));
-    const cellDateAtMidnight = new Date(cellDate.setHours(0, 0, 0, 0));
-
-    // Comparaison simplifiée : retourner les valeurs pour AG Grid
-    if (cellDateAtMidnight < filterDateAtMidnight) {
-        return -1;
-    } else if (cellDateAtMidnight > filterDateAtMidnight) {
-        return 1;
-    } else {
-        return 0;
-    }
+{
+    headerName: "Date Column",
+    field: "dateField",
+    filter: "agDateColumnFilter",
+    filterParams: {
+        comparator: (filterDate, cellValue) => {
+            // Simplement retourner 0 pour forcer l'interface à ne pas filtrer côté frontend
+            return 0;
+        },
+        // Désactiver les filtres "inRange" (between) côté frontend en les laissant vides
+        inRangeInclusive: true, // Juste pour laisser l'interface disponible
+    },
+    onFilterChanged: params => {
+        // Capture l'état du filtre et envoyer une requête au backend
+        const filterModel = params.api.getFilterModel();
+        fetchFilteredDataFromBackend(filterModel).then(filteredData => {
+            params.api.setRowData(filteredData); // Afficher les données du backend
+        });
+    },
+    // autres configurations...
 }
