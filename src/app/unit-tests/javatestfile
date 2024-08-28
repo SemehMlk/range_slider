@@ -1,54 +1,41 @@
-comparator: (filterLocalDateAtMidnight: Date, cellValue: string, filterModel: any) => {
+comparator: (filterDate: Date, cellValue: string) => {
     // Convertir cellValue en objet Date
     const cellDate = new Date(cellValue);
 
     // Normaliser les dates à minuit pour ignorer les heures et fuseaux horaires
-    const filterDateAtMidnight = new Date(
-        filterLocalDateAtMidnight.getFullYear(),
-        filterLocalDateAtMidnight.getMonth(),
-        filterLocalDateAtMidnight.getDate()
-    );
+    const filterDateAtMidnight = new Date(filterDate.getFullYear(), filterDate.getMonth(), filterDate.getDate());
+    const cellDateAtMidnight = new Date(cellDate.getFullYear(), cellDate.getMonth(), cellDate.getDate());
 
-    const cellDateAtMidnight = new Date(
-        cellDate.getFullYear(),
-        cellDate.getMonth(),
-        cellDate.getDate()
-    );
+    // Comparaison simple
+    if (cellDateAtMidnight < filterDateAtMidnight) {
+        return -1;
+    } else if (cellDateAtMidnight > filterDateAtMidnight) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
 
-    // Détecter le type de filtre utilisé dans AG Grid
-    const filterType = filterModel.type;
 
-    if (filterType === 'equals') {
-        // Vérifier si les dates sont égales
-        return cellDateAtMidnight.getTime() === filterDateAtMidnight.getTime() ? 0 : -1;
-    } else if (filterType === 'greaterThan') {
-        // Vérifier si la date de la cellule est après la date du filtre
-        return cellDateAtMidnight > filterDateAtMidnight ? 1 : -1;
-    } else if (filterType === 'greaterThanOrEqual') {
-        // Vérifier si la date de la cellule est après ou égale à la date du filtre
-        return cellDateAtMidnight >= filterDateAtMidnight ? 0 : -1;
-    } else if (filterType === 'lessThan') {
-        // Vérifier si la date de la cellule est avant la date du filtre
-        return cellDateAtMidnight < filterDateAtMidnight ? -1 : 1;
-    } else if (filterType === 'lessThanOrEqual') {
-        // Vérifier si la date de la cellule est avant ou égale à la date du filtre
-        return cellDateAtMidnight <= filterDateAtMidnight ? 0 : 1;
-    } else if (filterType === 'inRange') {
-        // Pour le filtre 'inRange', comparer avec les deux dates
-        const filterEndDateAtMidnight = new Date(
-            filterModel.dateTo.getFullYear(),
-            filterModel.dateTo.getMonth(),
-            filterModel.dateTo.getDate()
-        );
-        if (cellDateAtMidnight >= filterDateAtMidnight && cellDateAtMidnight <= filterEndDateAtMidnight) {
-            return 0;
-        } else if (cellDateAtMidnight < filterDateAtMidnight) {
-            return -1;
-        } else {
-            return 1;
-        }
+
+comparator: (filterDate: Date, cellValue: string) => {
+    if (!cellValue) {
+        return -1;
     }
 
-    // Si aucun type de filtre n'est trouvé, retourner -1 par défaut
-    return -1;
+    // Convertir cellValue en objet Date
+    const cellDate = new Date(cellValue);
+
+    // Normaliser les deux dates à minuit
+    const filterDateAtMidnight = new Date(filterDate.setHours(0, 0, 0, 0));
+    const cellDateAtMidnight = new Date(cellDate.setHours(0, 0, 0, 0));
+
+    // Comparaison simplifiée : retourner les valeurs pour AG Grid
+    if (cellDateAtMidnight < filterDateAtMidnight) {
+        return -1;
+    } else if (cellDateAtMidnight > filterDateAtMidnight) {
+        return 1;
+    } else {
+        return 0;
+    }
 }
