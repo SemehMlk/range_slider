@@ -1,33 +1,77 @@
-public static Specification<KemmCanonicalMessage> buildSpecification(ApiSearchRequestDto request) {
-    try {
-        Specification<KemmCanonicalMessage> spec = Specification.where(null);
+import org.springframework.data.jpa.domain.Specification;
 
-        if (request != null && request.getLogicOperator() != null) {
-            for (ApiSearchCriteriaDto criteria : request.getCriteria()) {
-                Specification<KemmCanonicalMessage> criteriaSpec = createSpecification(criteria);
-                if (criteria.getSubCriteria() != null && !criteria.getSubCriteria().isEmpty()) {
-                    Specification<KemmCanonicalMessage> subSpec = Specification.where(null);
-                    for (ApiSearchCriteriaDto subCriteria : criteria.getSubCriteria()) {
-                        Specification<KemmCanonicalMessage> subCriteriaSpec = createSpecification(subCriteria);
-                        if ("AND".equalsIgnoreCase(criteria.getGroupOperator())) {
-                            subSpec = subSpec.and(subCriteriaSpec);
-                        } else if ("OR".equalsIgnoreCase(criteria.getGroupOperator())) {
-                            subSpec = subSpec.or(subCriteriaSpec);
+public class MessageSpecificationBuilder {
+
+    public static Specification<KemmCanonicalMessage> buildSpecification(ApiSearchRequestDto request) {
+        try {
+            Specification<KemmCanonicalMessage> spec = Specification.where(null);
+
+            if (request != null && request.getLogicOperator() != null) {
+                for (ApiSearchCriteriaDto criteria : request.getCriteria()) {
+                    Specification<KemmCanonicalMessage> criteriaSpec = createSpecification(criteria);
+
+                    if (criteria.getSubCriteria() != null && !criteria.getSubCriteria().isEmpty()) {
+                        Specification<KemmCanonicalMessage> subSpec = Specification.where(null);
+                        for (ApiSearchCriteriaDto subCriteria : criteria.getSubCriteria()) {
+                            Specification<KemmCanonicalMessage> subCriteriaSpec = createSpecification(subCriteria);
+                            if ("AND".equalsIgnoreCase(criteria.getGroupOperator())) {
+                                subSpec = subSpec.and(subCriteriaSpec);
+                            } else if ("OR".equalsIgnoreCase(criteria.getGroupOperator())) {
+                                subSpec = subSpec.or(subCriteriaSpec);
+                            }
                         }
+                        criteriaSpec = subSpec;
                     }
-                    criteriaSpec = subSpec;
-                }
 
-                if ("AND".equalsIgnoreCase(request.getLogicOperator())) {
-                    spec = spec.and(criteriaSpec);
-                } else if ("OR".equalsIgnoreCase(request.getLogicOperator())) {
-                    spec = spec.or(criteriaSpec);
+                    if ("AND".equalsIgnoreCase(request.getLogicOperator())) {
+                        spec = spec.and(criteriaSpec);
+                    } else if ("OR".equalsIgnoreCase(request.getLogicOperator())) {
+                        spec = spec.or(criteriaSpec);
+                    }
                 }
             }
-        }
-        return spec;
+            return spec;
 
-    } catch (Exception e) {
-        throw new InvalidRequestException(ApiErrorCodes.INVALID_SEARCH_REQUEST, List.of(e.getMessage()), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            throw new InvalidRequestException(ApiErrorCodes.INVALID_SEARCH_REQUEST, List.of(e.getMessage()), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    private static Specification<KemmCanonicalMessage> createSpecification(ApiSearchCriteriaDto criteria) {
+        if (criteria instanceof DateRangeCriteria) {
+            return createDateRangeSpecification((DateRangeCriteria) criteria);
+        } else if (criteria instanceof EnumCriteria) {
+            return createEnumSpecification((EnumCriteria) criteria);
+        } else if (criteria instanceof TextCriteria) {
+            return createTextSpecification((TextCriteria) criteria);
+        } else if (criteria instanceof NumericCriteria) {
+            return createNumericSpecification((NumericCriteria) criteria);
+        }
+        return null;
+    }
+
+    private static Specification<KemmCanonicalMessage> createDateRangeSpecification(DateRangeCriteria criteria) {
+        return (root, query, builder) -> builder.between(root.get(criteria.getField()), criteria.getStartDate(), criteria.getEndDate());
+    }
+
+    private static Specification<KemmCanonicalMessage> createEnumSpecification(EnumCriteria criteria) {
+        return (root, query, builder) -> root.get(criteria.getField()).in(criteria.getOptions());
+    }
+
+    private static Specification<KemmCanonicalMessage> createTextSpecification(TextCriteria criteria) {
+        return (root, query, builder) -> builder.like(root.get(criteria.getField()), "%" + criteria.getSearchText() + "%");
+    }
+
+    private static Specification<KemmCanonicalMessage> createNumericSpecification(NumericCriteria criteria) {
+        return (root, query, builder) -> {
+            Predicate predicate = builder.conjunction();
+            if (criteria.getMinValue() != null) {
+                predicate = builder.and(predicate, builder.greaterThanOrEqualTo(root.get(criteria.getField()), criteria.getMinValue()));
+            }
+            if (criteria.getMaxValue() != null) {
+                predicate = builder.and(predicate, builder.lessThanOrEqualTo(root.get(criteria.getField()), criteria.getMaxValue()));
+            }
+            return predicate;
+        };
     }
 }
