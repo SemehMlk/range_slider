@@ -38,38 +38,39 @@ public class MessageSpecificationBuilder {
     }
 
     private static Specification<KemmCanonicalMessage> createSpecification(ApiSearchCriteriaDto criteria) {
-        if (criteria instanceof DateRangeCriteria) {
-            return createDateRangeSpecification((DateRangeCriteria) criteria);
-        } else if (criteria instanceof EnumCriteria) {
-            return createEnumSpecification((EnumCriteria) criteria);
-        } else if (criteria instanceof TextCriteria) {
-            return createTextSpecification((TextCriteria) criteria);
-        } else if (criteria instanceof NumericCriteria) {
-            return createNumericSpecification((NumericCriteria) criteria);
+        if (criteria instanceof ApiInOptionsCriteria) {
+            return createInOptionsSpecification((ApiInOptionsCriteria) criteria);
+        } else if (criteria instanceof ApiTextCriteria) {
+            return createTextSpecification((ApiTextCriteria) criteria);
+        } else if (criteria instanceof ApiDateTimeRangeCriteria) {
+            return createDateTimeRangeSpecification((ApiDateTimeRangeCriteria) criteria);
+        } else if (criteria instanceof ApiLongRangeCriteria) {
+            return createLongRangeSpecification((ApiLongRangeCriteria) criteria);
         }
+        // Ajoutez les autres types ici...
         return null;
     }
 
-    private static Specification<KemmCanonicalMessage> createDateRangeSpecification(DateRangeCriteria criteria) {
-        return (root, query, builder) -> builder.between(root.get(criteria.getField()), criteria.getStartDate(), criteria.getEndDate());
+    private static Specification<KemmCanonicalMessage> createInOptionsSpecification(ApiInOptionsCriteria criteria) {
+        return (root, query, builder) -> root.get(criteria.getSearchField().getFieldName()).in(criteria.getOptions());
     }
 
-    private static Specification<KemmCanonicalMessage> createEnumSpecification(EnumCriteria criteria) {
-        return (root, query, builder) -> root.get(criteria.getField()).in(criteria.getOptions());
+    private static Specification<KemmCanonicalMessage> createTextSpecification(ApiTextCriteria criteria) {
+        return (root, query, builder) -> builder.like(root.get(criteria.getSearchField().getFieldName()), "%" + criteria.getSearchText() + "%");
     }
 
-    private static Specification<KemmCanonicalMessage> createTextSpecification(TextCriteria criteria) {
-        return (root, query, builder) -> builder.like(root.get(criteria.getField()), "%" + criteria.getSearchText() + "%");
+    private static Specification<KemmCanonicalMessage> createDateTimeRangeSpecification(ApiDateTimeRangeCriteria criteria) {
+        return (root, query, builder) -> builder.between(root.get(criteria.getSearchField().getFieldName()), criteria.getStartDate(), criteria.getEndDate());
     }
 
-    private static Specification<KemmCanonicalMessage> createNumericSpecification(NumericCriteria criteria) {
+    private static Specification<KemmCanonicalMessage> createLongRangeSpecification(ApiLongRangeCriteria criteria) {
         return (root, query, builder) -> {
             Predicate predicate = builder.conjunction();
             if (criteria.getMinValue() != null) {
-                predicate = builder.and(predicate, builder.greaterThanOrEqualTo(root.get(criteria.getField()), criteria.getMinValue()));
+                predicate = builder.and(predicate, builder.greaterThanOrEqualTo(root.get(criteria.getSearchField().getFieldName()), criteria.getMinValue()));
             }
             if (criteria.getMaxValue() != null) {
-                predicate = builder.and(predicate, builder.lessThanOrEqualTo(root.get(criteria.getField()), criteria.getMaxValue()));
+                predicate = builder.and(predicate, builder.lessThanOrEqualTo(root.get(criteria.getSearchField().getFieldName()), criteria.getMaxValue()));
             }
             return predicate;
         };
