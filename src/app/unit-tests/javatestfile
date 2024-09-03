@@ -1,78 +1,58 @@
-import org.springframework.data.jpa.domain.Specification;
+import { formatDateToISO, formatDateToYMD, dateComparator, getSortParams, directionValueFormatter } from './helper.ts';
 
-public class MessageSpecificationBuilder {
+describe('Helper Functions', () => {
 
-    public static Specification<KemmCanonicalMessage> buildSpecification(ApiSearchRequestDto request) {
-        try {
-            Specification<KemmCanonicalMessage> spec = Specification.where(null);
+  it('should format date to ISO string correctly', () => {
+    const date = new Date('2023-09-01T10:00:00Z');
+    const result = formatDateToISO(date);
+    expect(result).toBe('2023-09-01T10:00:00.000Z');
+  });
 
-            if (request != null && request.getLogicOperator() != null) {
-                for (ApiSearchCriteriaDto criteria : request.getCriteria()) {
-                    Specification<KemmCanonicalMessage> criteriaSpec = createSpecification(criteria);
+  it('should return null for formatDateToISO when date is invalid', () => {
+    const result = formatDateToISO(null);
+    expect(result).toBeNull();
+  });
 
-                    if (criteria.getSubCriteria() != null && !criteria.getSubCriteria().isEmpty()) {
-                        Specification<KemmCanonicalMessage> subSpec = Specification.where(null);
-                        for (ApiSearchCriteriaDto subCriteria : criteria.getSubCriteria()) {
-                            Specification<KemmCanonicalMessage> subCriteriaSpec = createSpecification(subCriteria);
-                            if ("AND".equalsIgnoreCase(criteria.getGroupOperator())) {
-                                subSpec = subSpec.and(subCriteriaSpec);
-                            } else if ("OR".equalsIgnoreCase(criteria.getGroupOperator())) {
-                                subSpec = subSpec.or(subCriteriaSpec);
-                            }
-                        }
-                        criteriaSpec = subSpec;
-                    }
+  it('should format date to YMD string correctly', () => {
+    const date = new Date('2023-09-01');
+    const result = formatDateToYMD(date);
+    expect(result).toBe('2023-8-1');
+  });
 
-                    if ("AND".equalsIgnoreCase(request.getLogicOperator())) {
-                        spec = spec.and(criteriaSpec);
-                    } else if ("OR".equalsIgnoreCase(request.getLogicOperator())) {
-                        spec = spec.or(criteriaSpec);
-                    }
-                }
-            }
-            return spec;
+  it('should return null for formatDateToYMD when date is invalid', () => {
+    const result = formatDateToYMD(null);
+    expect(result).toBeNull();
+  });
 
-        } catch (Exception e) {
-            throw new InvalidRequestException(ApiErrorCodes.INVALID_SEARCH_REQUEST, List.of(e.getMessage()), HttpStatus.BAD_REQUEST);
-        }
-    }
+  it('should compare two dates correctly', () => {
+    const filterDate = new Date('2023-09-01');
+    const cellValue = '2023-09-02';
+    const result = dateComparator(filterDate, cellValue);
+    expect(result).toBe(-1);
+  });
 
-    private static Specification<KemmCanonicalMessage> createSpecification(ApiSearchCriteriaDto criteria) {
-        if (criteria instanceof ApiInOptionsCriteria) {
-            return createInOptionsSpecification((ApiInOptionsCriteria) criteria);
-        } else if (criteria instanceof ApiTextCriteria) {
-            return createTextSpecification((ApiTextCriteria) criteria);
-        } else if (criteria instanceof ApiDateTimeRangeCriteria) {
-            return createDateTimeRangeSpecification((ApiDateTimeRangeCriteria) criteria);
-        } else if (criteria instanceof ApiLongRangeCriteria) {
-            return createLongRangeSpecification((ApiLongRangeCriteria) criteria);
-        }
-        // Ajoutez les autres types ici...
-        return null;
-    }
+  it('should return -1 when cellValue is invalid in dateComparator', () => {
+    const filterDate = new Date('2023-09-01');
+    const result = dateComparator(filterDate, null);
+    expect(result).toBe(-1);
+  });
 
-    private static Specification<KemmCanonicalMessage> createInOptionsSpecification(ApiInOptionsCriteria criteria) {
-        return (root, query, builder) -> root.get(criteria.getSearchField().getFieldName()).in(criteria.getOptions());
-    }
+  it('should return correct sort params', () => {
+    const sortModel = { colId: 'date', sort: 'asc' };
+    const result = getSortParams(sortModel);
+    expect(result).toEqual({ column: 'date', direction: 'ASC' });
+  });
 
-    private static Specification<KemmCanonicalMessage> createTextSpecification(ApiTextCriteria criteria) {
-        return (root, query, builder) -> builder.like(root.get(criteria.getSearchField().getFieldName()), "%" + criteria.getSearchText() + "%");
-    }
+  it('should format direction value correctly', () => {
+    const params = { value: 'NORTH' };
+    const result = directionValueFormatter(params);
+    expect(result).toBe('North'); // Assurez-vous que c'est bien le format attendu dans le DIRECTIONS_MAP
+  });
 
-    private static Specification<KemmCanonicalMessage> createDateTimeRangeSpecification(ApiDateTimeRangeCriteria criteria) {
-        return (root, query, builder) -> builder.between(root.get(criteria.getSearchField().getFieldName()), criteria.getStartDate(), criteria.getEndDate());
-    }
+  it('should return empty string when direction value is not found', () => {
+    const params = { value: 'UNKNOWN_DIRECTION' };
+    const result = directionValueFormatter(params);
+    expect(result).toBe('');
+  });
 
-    private static Specification<KemmCanonicalMessage> createLongRangeSpecification(ApiLongRangeCriteria criteria) {
-        return (root, query, builder) -> {
-            Predicate predicate = builder.conjunction();
-            if (criteria.getMinValue() != null) {
-                predicate = builder.and(predicate, builder.greaterThanOrEqualTo(root.get(criteria.getSearchField().getFieldName()), criteria.getMinValue()));
-            }
-            if (criteria.getMaxValue() != null) {
-                predicate = builder.and(predicate, builder.lessThanOrEqualTo(root.get(criteria.getSearchField().getFieldName()), criteria.getMaxValue()));
-            }
-            return predicate;
-        };
-    }
-}
+});
