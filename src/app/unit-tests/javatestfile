@@ -1,58 +1,47 @@
-import { formatDateToISO, formatDateToYMD, dateComparator, getSortParams, directionValueFormatter } from './helper.ts';
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.data.jpa.domain.Specification;
 
-describe('Helper Functions', () => {
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.when;
 
-  it('should format date to ISO string correctly', () => {
-    const date = new Date('2023-09-01T10:00:00Z');
-    const result = formatDateToISO(date);
-    expect(result).toBe('2023-09-01T10:00:00.000Z');
-  });
+public class MessageSpecificationBuilderTest {
 
-  it('should return null for formatDateToISO when date is invalid', () => {
-    const result = formatDateToISO(null);
-    expect(result).toBeNull();
-  });
+    @Test
+    public void testBuildSpecificationWithAndOperator() {
+        ApiSearchRequestDto request = Mockito.mock(ApiSearchRequestDto.class);
+        ApiLogicSearchOperatorDto operator = ApiLogicSearchOperatorDto.AND;
+        when(request.getLogicOperator()).thenReturn(operator);
 
-  it('should format date to YMD string correctly', () => {
-    const date = new Date('2023-09-01');
-    const result = formatDateToYMD(date);
-    expect(result).toBe('2023-8-1');
-  });
+        ApiSearchCriteriaDto criteria = Mockito.mock(ApiSearchCriteriaDto.class);
+        when(request.getCriteria()).thenReturn(Collections.singletonList(criteria));
 
-  it('should return null for formatDateToYMD when date is invalid', () => {
-    const result = formatDateToYMD(null);
-    expect(result).toBeNull();
-  });
+        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
 
-  it('should compare two dates correctly', () => {
-    const filterDate = new Date('2023-09-01');
-    const cellValue = '2023-09-02';
-    const result = dateComparator(filterDate, cellValue);
-    expect(result).toBe(-1);
-  });
+        assertNotNull(spec);
+        // Add further assertions depending on your expected behavior
+    }
 
-  it('should return -1 when cellValue is invalid in dateComparator', () => {
-    const filterDate = new Date('2023-09-01');
-    const result = dateComparator(filterDate, null);
-    expect(result).toBe(-1);
-  });
+    @Test
+    public void testCreateTimeRangeSpecification() {
+        ApiDateTimeRangeCriteriaDto criteria = Mockito.mock(ApiDateTimeRangeCriteriaDto.class);
+        when(criteria.getMinDate()).thenReturn(OffsetDateTime.parse("2023-09-01T10:00:00Z"));
+        when(criteria.getMaxDate()).thenReturn(OffsetDateTime.parse("2023-09-02T10:00:00Z"));
 
-  it('should return correct sort params', () => {
-    const sortModel = { colId: 'date', sort: 'asc' };
-    const result = getSortParams(sortModel);
-    expect(result).toEqual({ column: 'date', direction: 'ASC' });
-  });
+        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createTimeRangeSpecification(criteria);
 
-  it('should format direction value correctly', () => {
-    const params = { value: 'NORTH' };
-    const result = directionValueFormatter(params);
-    expect(result).toBe('North'); // Assurez-vous que c'est bien le format attendu dans le DIRECTIONS_MAP
-  });
+        assertNotNull(spec);
+        // Add further assertions based on the Specification's behavior
+    }
 
-  it('should return empty string when direction value is not found', () => {
-    const params = { value: 'UNKNOWN_DIRECTION' };
-    const result = directionValueFormatter(params);
-    expect(result).toBe('');
-  });
+    @Test
+    public void testCreateEqualDatetimeSpecification() {
+        ApiEqualDatetimeCriteriaDto criteria = Mockito.mock(ApiEqualDatetimeCriteriaDto.class);
+        when(criteria.getSearchDatetimeValue()).thenReturn(OffsetDateTime.parse("2023-09-01T10:00:00Z"));
 
-});
+        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createEqualDatetimeSpecification(criteria);
+
+        assertNotNull(spec);
+        // Add further assertions depending on how the Specification is expected to behave
+    }
+}
