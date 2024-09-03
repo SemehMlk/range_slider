@@ -3,45 +3,71 @@ import org.mockito.Mockito;
 import org.springframework.data.jpa.domain.Specification;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class MessageSpecificationBuilderTest {
 
     @Test
-    public void testBuildSpecificationWithAndOperator() {
-        ApiSearchRequestDto request = Mockito.mock(ApiSearchRequestDto.class);
-        ApiLogicSearchOperatorDto operator = ApiLogicSearchOperatorDto.AND;
-        when(request.getLogicOperator()).thenReturn(operator);
-
+    public void testCreateSpecificationWithSubCriteria() {
+        // Mocking the ApiSearchCriteriaDto with sub-criteria
         ApiSearchCriteriaDto criteria = Mockito.mock(ApiSearchCriteriaDto.class);
-        when(request.getCriteria()).thenReturn(Collections.singletonList(criteria));
+        when(criteria.getSubCriteria()).thenReturn(Collections.singletonList(mock(ApiSearchCriteriaDto.class)));
+        when(criteria.getGroupOperator()).thenReturn(ApiLogicSearchOperatorDto.AND);
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
+        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createSpecification(criteria);
 
         assertNotNull(spec);
         // Add further assertions depending on your expected behavior
     }
 
     @Test
-    public void testCreateTimeRangeSpecification() {
-        ApiDateTimeRangeCriteriaDto criteria = Mockito.mock(ApiDateTimeRangeCriteriaDto.class);
-        when(criteria.getMinDate()).thenReturn(OffsetDateTime.parse("2023-09-01T10:00:00Z"));
-        when(criteria.getMaxDate()).thenReturn(OffsetDateTime.parse("2023-09-02T10:00:00Z"));
+    public void testCreateSpecificationWithoutSubCriteria() {
+        // Mocking the ApiSearchCriteriaDto without sub-criteria
+        ApiSearchCriteriaDto criteria = Mockito.mock(ApiSearchCriteriaDto.class);
+        when(criteria.getSubCriteria()).thenReturn(null);
+        when(criteria.getCriteriaType()).thenReturn(CriteriaType.DATE_TIME_RANGE);
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createTimeRangeSpecification(criteria);
+        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createSpecification(criteria);
 
         assertNotNull(spec);
-        // Add further assertions based on the Specification's behavior
+        // Add further assertions depending on your expected behavior
     }
 
     @Test
-    public void testCreateEqualDatetimeSpecification() {
+    public void testCreateSpecificationForEqualDatetime() {
+        // Mocking the ApiSearchCriteriaDto for EQUAL_DATETIME criteria
         ApiEqualDatetimeCriteriaDto criteria = Mockito.mock(ApiEqualDatetimeCriteriaDto.class);
+        when(criteria.getCriteriaType()).thenReturn(CriteriaType.EQUAL_DATETIME);
         when(criteria.getSearchDatetimeValue()).thenReturn(OffsetDateTime.parse("2023-09-01T10:00:00Z"));
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createEqualDatetimeSpecification(criteria);
+        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createSpecification(criteria);
 
         assertNotNull(spec);
         // Add further assertions depending on how the Specification is expected to behave
+    }
+
+    @Test
+    public void testCreateSpecificationForDateRange() {
+        // Mocking the ApiSearchCriteriaDto for DATE_RANGE criteria
+        ApiRangeCriteriaDto criteria = Mockito.mock(ApiRangeCriteriaDto.class);
+        when(criteria.getCriteriaType()).thenReturn(CriteriaType.DATE_RANGE);
+        when(criteria.getMinDate()).thenReturn(LocalDate.parse("2023-09-01"));
+        when(criteria.getMaxDate()).thenReturn(LocalDate.parse("2023-09-10"));
+
+        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.createSpecification(criteria);
+
+        assertNotNull(spec);
+        // Add further assertions depending on how the Specification is expected to behave
+    }
+
+    @Test
+    public void testCreateSpecificationWithUnsupportedCriteriaType() {
+        // Mocking the ApiSearchCriteriaDto with an unsupported criteria type
+        ApiSearchCriteriaDto criteria = Mockito.mock(ApiSearchCriteriaDto.class);
+        when(criteria.getCriteriaType()).thenReturn(CriteriaType.UNSUPPORTED_TYPE);
+
+        assertThrows(UnsupportedOperationException.class, () -> {
+            MessageSpecificationBuilder.createSpecification(criteria);
+        });
     }
 }
