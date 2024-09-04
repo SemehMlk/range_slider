@@ -1,6 +1,5 @@
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -9,6 +8,7 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
+import java.time.OffsetDateTime;
 
 public class MessageSpecificationBuilderTest {
 
@@ -32,18 +32,19 @@ public class MessageSpecificationBuilderTest {
         spec.toPredicate(root, query, cb);
 
         // Capturer les arguments passés à CriteriaBuilder.between
-        ArgumentCaptor<Object> lowerBoundCaptor = ArgumentCaptor.forClass(Object.class);
-        ArgumentCaptor<Object> upperBoundCaptor = ArgumentCaptor.forClass(Object.class);
+        ArgumentCaptor<OffsetDateTime> lowerBoundCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
+        ArgumentCaptor<OffsetDateTime> upperBoundCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
 
+        // Vérifier que between est bien appelé avec les bons arguments
         verify(cb).between(
-            eq(root.get("creationDate")), 
-            lowerBoundCaptor.capture(), 
+            eq(root.get("creationDate")), // Utilisez eq avec le type correct ici
+            lowerBoundCaptor.capture(),
             upperBoundCaptor.capture()
         );
 
         // Assert sur les arguments capturés
-        Object lowerBound = lowerBoundCaptor.getValue();
-        Object upperBound = upperBoundCaptor.getValue();
+        OffsetDateTime lowerBound = lowerBoundCaptor.getValue();
+        OffsetDateTime upperBound = upperBoundCaptor.getValue();
 
         assertThat(lowerBound).isNotNull();
         assertThat(upperBound).isNotNull();
