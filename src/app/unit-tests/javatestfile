@@ -1,121 +1,37 @@
-import { 
-  buildFilters 
-} from './filter-builder';
-import { KemApiSearchableField, KemApiSearchCriteriaType } from './field-enum'; // Adaptez les imports
+import { directionValueFormatter } from './path-to-your-function';  // Modifiez le chemin d'import selon la structure de votre projet
 
-describe('FilterBuilder - buildFilters', () => {
+// Mock du DIRECTIONS_MAP
+const DIRECTIONS_MAP = new Map([
+  ['NORTH', 'North'],
+  ['SOUTH', 'South'],
+  ['EAST', 'East'],
+  ['WEST', 'West']
+]);
 
-  it('should build filters for greater than number fields', () => {
-    const filterModel = {
-      numberField: {
-        filterType: 'number',
-        conditions: [
-          { filter: 10, type: 'greaterThan' }
-        ]
-      }
-    };
+describe('directionValueFormatter', () => {
 
-    const result = buildFilters(filterModel);
-    expect(result).toHaveLength(1);
-    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
-    expect(result[0].minLong).toBe(10);
+  it('should return the correct direction name for a valid direction', () => {
+    const params = { value: 'NORTH' } as any; // Créez un objet params avec la valeur à tester
+    const result = directionValueFormatter(params);
+    expect(result).toBe('North'); // Vérifie que la fonction retourne la bonne valeur
   });
 
-  it('should build filters for less than number fields', () => {
-    const filterModel = {
-      numberField: {
-        filterType: 'number',
-        conditions: [
-          { filter: 5, type: 'lessThan' }
-        ]
-      }
-    };
-
-    const result = buildFilters(filterModel);
-    expect(result).toHaveLength(1);
-    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
-    expect(result[0].maxLong).toBe(5);
+  it('should return an empty string for an invalid direction', () => {
+    const params = { value: 'INVALID_DIRECTION' } as any;
+    const result = directionValueFormatter(params);
+    expect(result).toBe(''); // Vérifie que la fonction retourne une chaîne vide pour une direction non valide
   });
 
-  it('should build filters for between number fields', () => {
-    const filterModel = {
-      numberField: {
-        filterType: 'number',
-        conditions: [
-          { filter: 5, filterTo: 15, type: 'inRange' }
-        ]
-      }
-    };
-
-    const result = buildFilters(filterModel);
-    expect(result).toHaveLength(1);
-    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
-    expect(result[0].minLong).toBe(5);
-    expect(result[0].maxLong).toBe(15);
+  it('should return an empty string for a null value', () => {
+    const params = { value: null } as any;
+    const result = directionValueFormatter(params);
+    expect(result).toBe(''); // Vérifie que la fonction retourne une chaîne vide si la valeur est null
   });
 
-  it('should build filters for equal date fields', () => {
-    const filterModel = {
-      dateField: {
-        filterType: 'date',
-        conditions: [
-          { dateFrom: '2023-09-04', type: 'equals' }
-        ]
-      }
-    };
-
-    const result = buildFilters(filterModel);
-    expect(result).toHaveLength(1);
-    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.EQUAL_DATE);
-    expect(result[0].searchDateValue).toBe('2023-09-04');
-  });
-
-  it('should build filters for contains text fields', () => {
-    const filterModel = {
-      textField: {
-        filterType: 'text',
-        conditions: [
-          { filter: 'example', type: 'contains' }
-        ]
-      }
-    };
-
-    const result = buildFilters(filterModel);
-    expect(result).toHaveLength(1);
-    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.TEXT);
-    expect(result[0].searchText).toBe('example');
-  });
-
-  it('should build filters for equal text fields', () => {
-    const filterModel = {
-      textField: {
-        filterType: 'text',
-        conditions: [
-          { filter: 'example', type: 'equals' }
-        ]
-      }
-    };
-
-    const result = buildFilters(filterModel);
-    expect(result).toHaveLength(1);
-    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.EQUAL);
-    expect(result[0].searchValue).toBe('example');
-  });
-
-  it('should build filters for set criteria with multiple options', () => {
-    const filterModel = {
-      enumField: {
-        filterType: 'set',
-        values: ['option1', 'option2']
-      }
-    };
-
-    const result = buildFilters(filterModel);
-    expect(result).toHaveLength(1);
-    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.IN_OPTIONS);
-    expect(result[0].options).toContain('option1');
-    expect(result[0].options).toContain('option2');
+  it('should return an empty string for an undefined value', () => {
+    const params = { value: undefined } as any;
+    const result = directionValueFormatter(params);
+    expect(result).toBe(''); // Vérifie que la fonction retourne une chaîne vide si la valeur est undefined
   });
 
 });
-
