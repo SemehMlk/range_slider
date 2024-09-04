@@ -1,37 +1,35 @@
-import { directionValueFormatter } from './path-to-your-function';  // Modifiez le chemin d'import selon la structure de votre projet
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.springframework.data.jpa.domain.Specification;
 
-// Mock du DIRECTIONS_MAP
-const DIRECTIONS_MAP = new Map([
-  ['NORTH', 'North'],
-  ['SOUTH', 'South'],
-  ['EAST', 'East'],
-  ['WEST', 'West']
-]);
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
-describe('directionValueFormatter', () => {
+public class MessageSpecificationBuilderTest {
 
-  it('should return the correct direction name for a valid direction', () => {
-    const params = { value: 'NORTH' } as any; // Créez un objet params avec la valeur à tester
-    const result = directionValueFormatter(params);
-    expect(result).toBe('North'); // Vérifie que la fonction retourne la bonne valeur
-  });
+    @Test
+    public void testSpecificationAppliesCorrectCriteria() {
+        // Arrange
+        OffsetDateTime date = OffsetDateTime.now();
+        ApiSearchCriteriaDto criteria = MessageTestUtils.createDateTimeCriteria(ApiSearchableFieldDto.FieldEnum.CREATION_DATE, date);
+        
+        ApiSearchRequestDto request = new ApiSearchRequestDto();
+        request.setLogicOperator(ApiLogicSearchOperatorDto.AND);
+        request.setCriteria(List.of(criteria));
 
-  it('should return an empty string for an invalid direction', () => {
-    const params = { value: 'INVALID_DIRECTION' } as any;
-    const result = directionValueFormatter(params);
-    expect(result).toBe(''); // Vérifie que la fonction retourne une chaîne vide pour une direction non valide
-  });
+        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
+        assertThat(spec).isNotNull();
 
-  it('should return an empty string for a null value', () => {
-    const params = { value: null } as any;
-    const result = directionValueFormatter(params);
-    expect(result).toBe(''); // Vérifie que la fonction retourne une chaîne vide si la valeur est null
-  });
+        // Mock the root, query, and criteria builder
+        Root<KemmCanonicalMessage> root = Mockito.mock(Root.class);
+        CriteriaQuery<?> query = Mockito.mock(CriteriaQuery.class);
+        CriteriaBuilder cb = Mockito.mock(CriteriaBuilder.class);
 
-  it('should return an empty string for an undefined value', () => {
-    const params = { value: undefined } as any;
-    const result = directionValueFormatter(params);
-    expect(result).toBe(''); // Vérifie que la fonction retourne une chaîne vide si la valeur est undefined
-  });
+        // Act - apply the specification
+        Predicate predicate = spec.toPredicate(root, query, cb);
 
-});
+        // Assert - verify that the criteria were applied correctly
+        verify(cb).equal(root.get("creationDate"), date);
+        assertThat(predicate).isNotNull();
+    }
+}
