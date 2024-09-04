@@ -1,81 +1,92 @@
 import { 
-  buildGreaterThanCriteria,
-  buildLessThanCriteria,
-  buildBetweenCriteria,
-  buildEqualDateCriteria,
-  buildLessThanDateCriteria,
-  buildGreaterThanDateCriteria,
-  buildBetweenDateCriteria,
+  buildFilters, 
   buildQuickFiltersSubCriteria 
 } from './filter-builder';
-import { KemApiSearchableField, KemApiSearchCriteriaType, KemApiLogicSearchOperator } from './field-enum'; // Adaptez l'import
+import { KemApiSearchableField, KemApiSearchCriteriaType, KemApiLogicSearchOperator } from './field-enum'; // Adaptez les imports
 
 describe('FilterBuilder Functions', () => {
 
-  describe('buildGreaterThanCriteria', () => {
-    it('should build a greater than number criteria', () => {
-      const result = buildGreaterThanCriteria(KemApiSearchableField.FieldEnum.NUMBER, 10, false, false);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
-      expect(result.minLong).toBe(10);
-      expect(result.negated).toBe(false);
-      expect(result.strictSearch).toBe(false);
-    });
-  });
+  describe('buildFilters', () => {
+    it('should build filters for greater than number fields', () => {
+      const filterModel = {
+        numberField: {
+          filterType: 'number',
+          conditions: [
+            { filter: 10, type: 'greaterThan' }
+          ]
+        }
+      };
 
-  describe('buildLessThanCriteria', () => {
-    it('should build a less than number criteria', () => {
-      const result = buildLessThanCriteria(KemApiSearchableField.FieldEnum.NUMBER, 5, false, false);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
-      expect(result.maxLong).toBe(5);
-      expect(result.negated).toBe(false);
-      expect(result.strictSearch).toBe(false);
+      const result = buildFilters(filterModel);
+      expect(result).toHaveLength(1);
+      expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
+      expect(result[0].minLong).toBe(10);
     });
-  });
 
-  describe('buildBetweenCriteria', () => {
-    it('should build a between number criteria', () => {
-      const result = buildBetweenCriteria(KemApiSearchableField.FieldEnum.NUMBER, 5, 15);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
-      expect(result.minLong).toBe(5);
-      expect(result.maxLong).toBe(15);
+    it('should build filters for less than number fields', () => {
+      const filterModel = {
+        numberField: {
+          filterType: 'number',
+          conditions: [
+            { filter: 5, type: 'lessThan' }
+          ]
+        }
+      };
+
+      const result = buildFilters(filterModel);
+      expect(result).toHaveLength(1);
+      expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
+      expect(result[0].maxLong).toBe(5);
     });
-  });
 
-  describe('buildEqualDateCriteria', () => {
-    it('should build an equal date criteria', () => {
-      const result = buildEqualDateCriteria(KemApiSearchableField.FieldEnum.DATE, '2023-09-04', false);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.EQUAL_DATE);
-      expect(result.searchDateValue).toBe('2023-09-04');
-      expect(result.negated).toBe(false);
+    it('should build filters for between number fields', () => {
+      const filterModel = {
+        numberField: {
+          filterType: 'number',
+          conditions: [
+            { filter: 5, filterTo: 15, type: 'inRange' }
+          ]
+        }
+      };
+
+      const result = buildFilters(filterModel);
+      expect(result).toHaveLength(1);
+      expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
+      expect(result[0].minLong).toBe(5);
+      expect(result[0].maxLong).toBe(15);
     });
-  });
 
-  describe('buildLessThanDateCriteria', () => {
-    it('should build a less than date criteria', () => {
-      const result = buildLessThanDateCriteria(KemApiSearchableField.FieldEnum.DATE, '2023-08-31', false, true);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.DATE_RANGE);
-      expect(result.maxDate).toBe('2023-08-31');
-      expect(result.negated).toBe(false);
-      expect(result.strictSearch).toBe(true);
+    it('should build filters for greater than date fields', () => {
+      const filterModel = {
+        dateField: {
+          filterType: 'date',
+          conditions: [
+            { dateFrom: '2023-09-01', type: 'greaterThan' }
+          ]
+        }
+      };
+
+      const result = buildFilters(filterModel);
+      expect(result).toHaveLength(1);
+      expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.DATE_RANGE);
+      expect(result[0].minDate).toBe('2023-09-01');
     });
-  });
 
-  describe('buildGreaterThanDateCriteria', () => {
-    it('should build a greater than date criteria', () => {
-      const result = buildGreaterThanDateCriteria(KemApiSearchableField.FieldEnum.DATE, '2023-09-01', false, false);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.DATE_RANGE);
-      expect(result.minDate).toBe('2023-09-01');
-      expect(result.negated).toBe(false);
-      expect(result.strictSearch).toBe(false);
-    });
-  });
+    it('should build filters for between date fields', () => {
+      const filterModel = {
+        dateField: {
+          filterType: 'date',
+          conditions: [
+            { dateFrom: '2023-09-01', dateTo: '2023-09-30', type: 'inRange' }
+          ]
+        }
+      };
 
-  describe('buildBetweenDateCriteria', () => {
-    it('should build a between date criteria', () => {
-      const result = buildBetweenDateCriteria(KemApiSearchableField.FieldEnum.DATE, '2023-09-01', '2023-09-30');
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.DATE_RANGE);
-      expect(result.minDate).toBe('2023-09-01');
-      expect(result.maxDate).toBe('2023-09-30');
+      const result = buildFilters(filterModel);
+      expect(result).toHaveLength(1);
+      expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.DATE_RANGE);
+      expect(result[0].minDate).toBe('2023-09-01');
+      expect(result[0].maxDate).toBe('2023-09-30');
     });
   });
 
@@ -85,6 +96,7 @@ describe('FilterBuilder Functions', () => {
         { criterionType: KemApiSearchCriteriaType.EQUAL, field: 'status', value: 'active' },
         { criterionType: KemApiSearchCriteriaType.EQUAL, field: 'status', value: 'inactive' }
       ];
+
       const result = buildQuickFiltersSubCriteria(subCriteria);
       expect(result.criterionType).toBe(KemApiSearchCriteriaType.IN_OPTIONS);
       expect(result.groupOperator).toBe(KemApiLogicSearchOperator.OR);
