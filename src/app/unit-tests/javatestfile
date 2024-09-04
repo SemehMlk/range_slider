@@ -1,35 +1,28 @@
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.springframework.data.jpa.domain.Specification;
+@Test
+public void testCreateSpecificationElapsedTime() {
+    ApiSearchCriteriaDto criteria = MessageTestUtils.createInLapseTimeCriteria(ApiSearchableFieldDto.FieldEnum.CREATION_DATE);
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+    ApiSearchRequestDto request = new ApiSearchRequestDto();
+    request.setLogicOperator(ApiLogicSearchOperatorDto.AND);
+    request.setCriteria(List.of(criteria));
 
-public class MessageSpecificationBuilderTest {
+    Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
 
-    @Test
-    public void testSpecificationAppliesCorrectCriteria() {
-        // Arrange
-        OffsetDateTime date = OffsetDateTime.now();
-        ApiSearchCriteriaDto criteria = MessageTestUtils.createDateTimeCriteria(ApiSearchableFieldDto.FieldEnum.CREATION_DATE, date);
-        
-        ApiSearchRequestDto request = new ApiSearchRequestDto();
-        request.setLogicOperator(ApiLogicSearchOperatorDto.AND);
-        request.setCriteria(List.of(criteria));
+    // Mocker les objets requis pour le test
+    Root<KemmCanonicalMessage> root = Mockito.mock(Root.class);
+    CriteriaQuery<?> query = Mockito.mock(CriteriaQuery.class);
+    CriteriaBuilder cb = Mockito.mock(CriteriaBuilder.class);
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
-        assertThat(spec).isNotNull();
+    // Appliquer la spécification
+    Predicate predicate = spec.toPredicate(root, query, cb);
 
-        // Mock the root, query, and criteria builder
-        Root<KemmCanonicalMessage> root = Mockito.mock(Root.class);
-        CriteriaQuery<?> query = Mockito.mock(CriteriaQuery.class);
-        CriteriaBuilder cb = Mockito.mock(CriteriaBuilder.class);
+    // Vérifier que la spécification n'est pas nulle
+    assertThat(predicate).isNotNull();
 
-        // Act - apply the specification
-        Predicate predicate = spec.toPredicate(root, query, cb);
-
-        // Assert - verify that the criteria were applied correctly
-        verify(cb).equal(root.get("creationDate"), date);
-        assertThat(predicate).isNotNull();
-    }
+    // Vérifier que le bon critère "between" a été appliqué
+    verify(cb).between(
+        eq(root.get("creationDate")),
+        any(), // Vous pouvez ajuster les dates en fonction des valeurs attendues
+        any()
+    );
 }
