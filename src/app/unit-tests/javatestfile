@@ -1,28 +1,53 @@
-@Test
-public void testCreateSpecificationElapsedTime() {
-    ApiSearchCriteriaDto criteria = MessageTestUtils.createInLapseTimeCriteria(ApiSearchableFieldDto.FieldEnum.CREATION_DATE);
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.assertThat;
 
-    ApiSearchRequestDto request = new ApiSearchRequestDto();
-    request.setLogicOperator(ApiLogicSearchOperatorDto.AND);
-    request.setCriteria(List.of(criteria));
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 
-    Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
+public class MessageSpecificationBuilderTest {
 
-    // Mocker les objets requis pour le test
-    Root<KemmCanonicalMessage> root = Mockito.mock(Root.class);
-    CriteriaQuery<?> query = Mockito.mock(CriteriaQuery.class);
-    CriteriaBuilder cb = Mockito.mock(CriteriaBuilder.class);
+    @Test
+    public void testCreateSpecificationElapsedTimeWithCapturedArguments() {
+        // Arrange
+        ApiSearchCriteriaDto criteria = MessageTestUtils.createInLapseTimeCriteria(ApiSearchableFieldDto.FieldEnum.CREATION_DATE);
 
-    // Appliquer la spécification
-    Predicate predicate = spec.toPredicate(root, query, cb);
+        ApiSearchRequestDto request = new ApiSearchRequestDto();
+        request.setLogicOperator(ApiLogicSearchOperatorDto.AND);
+        request.setCriteria(List.of(criteria));
 
-    // Vérifier que la spécification n'est pas nulle
-    assertThat(predicate).isNotNull();
+        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
 
-    // Vérifier que le bon critère "between" a été appliqué
-    verify(cb).between(
-        eq(root.get("creationDate")),
-        any(), // Vous pouvez ajuster les dates en fonction des valeurs attendues
-        any()
-    );
+        // Mocking
+        Root<KemmCanonicalMessage> root = Mockito.mock(Root.class);
+        CriteriaQuery<?> query = Mockito.mock(CriteriaQuery.class);
+        CriteriaBuilder cb = Mockito.mock(CriteriaBuilder.class);
+
+        // Appliquer la spécification
+        spec.toPredicate(root, query, cb);
+
+        // Capturer les arguments passés à CriteriaBuilder.between
+        ArgumentCaptor<Object> lowerBoundCaptor = ArgumentCaptor.forClass(Object.class);
+        ArgumentCaptor<Object> upperBoundCaptor = ArgumentCaptor.forClass(Object.class);
+
+        verify(cb).between(
+            eq(root.get("creationDate")), 
+            lowerBoundCaptor.capture(), 
+            upperBoundCaptor.capture()
+        );
+
+        // Assert sur les arguments capturés
+        Object lowerBound = lowerBoundCaptor.getValue();
+        Object upperBound = upperBoundCaptor.getValue();
+
+        assertThat(lowerBound).isNotNull();
+        assertThat(upperBound).isNotNull();
+
+        // Ajoutez ici les assertions supplémentaires sur les valeurs capturées
+    }
 }
