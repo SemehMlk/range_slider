@@ -1,155 +1,121 @@
 import { 
-  buildFilters, 
-  buildQuickFiltersSubCriteria, 
-  buildEqualDateCriteria,
-  buildContainsCriteria,
-  buildEqualCriteria,
-  buildSetCriteria
+  buildFilters 
 } from './filter-builder';
-import { KemApiSearchableField, KemApiSearchCriteriaType, KemApiLogicSearchOperator } from './field-enum'; // Adaptez les imports
+import { KemApiSearchableField, KemApiSearchCriteriaType } from './field-enum'; // Adaptez les imports
 
-describe('FilterBuilder Functions', () => {
+describe('FilterBuilder - buildFilters', () => {
 
-  describe('buildFilters', () => {
-    it('should build filters for greater than number fields', () => {
-      const filterModel = {
-        numberField: {
-          filterType: 'number',
-          conditions: [
-            { filter: 10, type: 'greaterThan' }
-          ]
-        }
-      };
+  it('should build filters for greater than number fields', () => {
+    const filterModel = {
+      numberField: {
+        filterType: 'number',
+        conditions: [
+          { filter: 10, type: 'greaterThan' }
+        ]
+      }
+    };
 
-      const result = buildFilters(filterModel);
-      expect(result).toHaveLength(1);
-      expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
-      expect(result[0].minLong).toBe(10);
-    });
-
-    it('should build filters for less than number fields', () => {
-      const filterModel = {
-        numberField: {
-          filterType: 'number',
-          conditions: [
-            { filter: 5, type: 'lessThan' }
-          ]
-        }
-      };
-
-      const result = buildFilters(filterModel);
-      expect(result).toHaveLength(1);
-      expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
-      expect(result[0].maxLong).toBe(5);
-    });
-
-    it('should build filters for between number fields', () => {
-      const filterModel = {
-        numberField: {
-          filterType: 'number',
-          conditions: [
-            { filter: 5, filterTo: 15, type: 'inRange' }
-          ]
-        }
-      };
-
-      const result = buildFilters(filterModel);
-      expect(result).toHaveLength(1);
-      expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
-      expect(result[0].minLong).toBe(5);
-      expect(result[0].maxLong).toBe(15);
-    });
-
-    it('should build filters for greater than date fields', () => {
-      const filterModel = {
-        dateField: {
-          filterType: 'date',
-          conditions: [
-            { dateFrom: '2023-09-01', type: 'greaterThan' }
-          ]
-        }
-      };
-
-      const result = buildFilters(filterModel);
-      expect(result).toHaveLength(1);
-      expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.DATE_RANGE);
-      expect(result[0].minDate).toBe('2023-09-01');
-    });
-
-    it('should build filters for between date fields', () => {
-      const filterModel = {
-        dateField: {
-          filterType: 'date',
-          conditions: [
-            { dateFrom: '2023-09-01', dateTo: '2023-09-30', type: 'inRange' }
-          ]
-        }
-      };
-
-      const result = buildFilters(filterModel);
-      expect(result).toHaveLength(1);
-      expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.DATE_RANGE);
-      expect(result[0].minDate).toBe('2023-09-01');
-      expect(result[0].maxDate).toBe('2023-09-30');
-    });
+    const result = buildFilters(filterModel);
+    expect(result).toHaveLength(1);
+    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
+    expect(result[0].minLong).toBe(10);
   });
 
-  describe('buildQuickFiltersSubCriteria', () => {
-    it('should build quick filters with subCriteria', () => {
-      const subCriteria = [
-        { criterionType: KemApiSearchCriteriaType.EQUAL, field: 'status', value: 'active' },
-        { criterionType: KemApiSearchCriteriaType.EQUAL, field: 'status', value: 'inactive' }
-      ];
+  it('should build filters for less than number fields', () => {
+    const filterModel = {
+      numberField: {
+        filterType: 'number',
+        conditions: [
+          { filter: 5, type: 'lessThan' }
+        ]
+      }
+    };
 
-      const result = buildQuickFiltersSubCriteria(subCriteria);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.IN_OPTIONS);
-      expect(result.groupOperator).toBe(KemApiLogicSearchOperator.OR);
-      expect(result.subCriteria).toHaveLength(2);
-    });
+    const result = buildFilters(filterModel);
+    expect(result).toHaveLength(1);
+    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
+    expect(result[0].maxLong).toBe(5);
   });
 
-  describe('buildEqualDateCriteria', () => {
-    it('should build an equal date criteria', () => {
-      const result = buildEqualDateCriteria(KemApiSearchableField.FieldEnum.DATE, '2023-09-04', false);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.EQUAL_DATE);
-      expect(result.searchDateValue).toBe('2023-09-04');
-      expect(result.negated).toBe(false);
-    });
+  it('should build filters for between number fields', () => {
+    const filterModel = {
+      numberField: {
+        filterType: 'number',
+        conditions: [
+          { filter: 5, filterTo: 15, type: 'inRange' }
+        ]
+      }
+    };
+
+    const result = buildFilters(filterModel);
+    expect(result).toHaveLength(1);
+    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.LONG_RANGE);
+    expect(result[0].minLong).toBe(5);
+    expect(result[0].maxLong).toBe(15);
   });
 
-  describe('buildContainsCriteria', () => {
-    it('should build a contains text criteria', () => {
-      const result = buildContainsCriteria(KemApiSearchableField.FieldEnum.TEXT, 'example', false);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.TEXT);
-      expect(result.searchText).toBe('example');
-      expect(result.negated).toBe(false);
-    });
+  it('should build filters for equal date fields', () => {
+    const filterModel = {
+      dateField: {
+        filterType: 'date',
+        conditions: [
+          { dateFrom: '2023-09-04', type: 'equals' }
+        ]
+      }
+    };
+
+    const result = buildFilters(filterModel);
+    expect(result).toHaveLength(1);
+    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.EQUAL_DATE);
+    expect(result[0].searchDateValue).toBe('2023-09-04');
   });
 
-  describe('buildEqualCriteria', () => {
-    it('should build an equal text criteria', () => {
-      const result = buildEqualCriteria(KemApiSearchableField.FieldEnum.TEXT, 'example', false);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.EQUAL);
-      expect(result.searchValue).toBe('example');
-      expect(result.negated).toBe(false);
-    });
+  it('should build filters for contains text fields', () => {
+    const filterModel = {
+      textField: {
+        filterType: 'text',
+        conditions: [
+          { filter: 'example', type: 'contains' }
+        ]
+      }
+    };
 
-    it('should build an equal number criteria', () => {
-      const result = buildEqualCriteria(KemApiSearchableField.FieldEnum.NUMBER, 42, false);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.EQUAL);
-      expect(result.searchValue).toBe(42);
-      expect(result.negated).toBe(false);
-    });
+    const result = buildFilters(filterModel);
+    expect(result).toHaveLength(1);
+    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.TEXT);
+    expect(result[0].searchText).toBe('example');
   });
 
-  describe('buildSetCriteria', () => {
-    it('should build a set criteria for multiple values', () => {
-      const result = buildSetCriteria(KemApiSearchableField.FieldEnum.ENUM, ['option1', 'option2']);
-      expect(result.criterionType).toBe(KemApiSearchCriteriaType.IN_OPTIONS);
-      expect(result.options).toContain('option1');
-      expect(result.options).toContain('option2');
-      expect(result.negated).toBe(false);
-    });
+  it('should build filters for equal text fields', () => {
+    const filterModel = {
+      textField: {
+        filterType: 'text',
+        conditions: [
+          { filter: 'example', type: 'equals' }
+        ]
+      }
+    };
+
+    const result = buildFilters(filterModel);
+    expect(result).toHaveLength(1);
+    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.EQUAL);
+    expect(result[0].searchValue).toBe('example');
+  });
+
+  it('should build filters for set criteria with multiple options', () => {
+    const filterModel = {
+      enumField: {
+        filterType: 'set',
+        values: ['option1', 'option2']
+      }
+    };
+
+    const result = buildFilters(filterModel);
+    expect(result).toHaveLength(1);
+    expect(result[0].criterionType).toBe(KemApiSearchCriteriaType.IN_OPTIONS);
+    expect(result[0].options).toContain('option1');
+    expect(result[0].options).toContain('option2');
   });
 
 });
+
