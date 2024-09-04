@@ -8,6 +8,7 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
+import javax.persistence.criteria.Path;
 import java.time.OffsetDateTime;
 
 public class MessageSpecificationBuilderTest {
@@ -28,6 +29,10 @@ public class MessageSpecificationBuilderTest {
         CriteriaQuery<?> query = Mockito.mock(CriteriaQuery.class);
         CriteriaBuilder cb = Mockito.mock(CriteriaBuilder.class);
 
+        // Simuler le champ root.get("creationDate") pour ne pas avoir de null
+        Path<OffsetDateTime> creationDatePath = Mockito.mock(Path.class);
+        when(root.get("creationDate")).thenReturn(creationDatePath);
+
         // Appliquer la spécification
         spec.toPredicate(root, query, cb);
 
@@ -37,7 +42,7 @@ public class MessageSpecificationBuilderTest {
 
         // Vérifier que between est bien appelé avec les bons arguments
         verify(cb).between(
-            eq(root.get("creationDate")), // Utilisez eq avec le type correct ici
+            eq(creationDatePath), // Utilisation correcte de eq avec le champ simulé
             lowerBoundCaptor.capture(),
             upperBoundCaptor.capture()
         );
