@@ -1,59 +1,52 @@
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.assertj.core.api.Assertions.assertThat;
+import java.time.temporal.ChronoUnit;
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
-import javax.persistence.criteria.Path;
-import java.time.OffsetDateTime;
+...
 
-public class MessageSpecificationBuilderTest {
+@Test
+public void testCreateSpecificationElapsedTimeWithCapturedArguments() {
+    // Arrange
+    ApiSearchCriteriaDto criteria = MessageTestUtils.createInLapseTimeCriteria(ApiSearchableFieldDto.FieldEnum.CREATION_DATE);
 
-    @Test
-    public void testCreateSpecificationElapsedTimeWithCapturedArguments() {
-        // Arrange
-        ApiSearchCriteriaDto criteria = MessageTestUtils.createInLapseTimeCriteria(ApiSearchableFieldDto.FieldEnum.CREATION_DATE);
+    ApiSearchRequestDto request = new ApiSearchRequestDto();
+    request.setLogicOperator(ApiLogicSearchOperatorDto.AND);
+    request.setCriteria(List.of(criteria));
 
-        ApiSearchRequestDto request = new ApiSearchRequestDto();
-        request.setLogicOperator(ApiLogicSearchOperatorDto.AND);
-        request.setCriteria(List.of(criteria));
+    Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
 
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
+    // Mocking
+    Root<KemmCanonicalMessage> root = Mockito.mock(Root.class);
+    CriteriaQuery<?> query = Mockito.mock(CriteriaQuery.class);
+    CriteriaBuilder cb = Mockito.mock(CriteriaBuilder.class);
 
-        // Mocking
-        Root<KemmCanonicalMessage> root = Mockito.mock(Root.class);
-        CriteriaQuery<?> query = Mockito.mock(CriteriaQuery.class);
-        CriteriaBuilder cb = Mockito.mock(CriteriaBuilder.class);
+    // Simuler le champ root.get("creationDate") pour éviter null
+    Path<OffsetDateTime> creationDatePath = Mockito.mock(Path.class);
+    Mockito.<Path<OffsetDateTime>>when(root.get("creationDate")).thenReturn(creationDatePath);
 
-        // Simuler le champ root.get("creationDate") pour ne pas avoir de null
-        Path<OffsetDateTime> creationDatePath = Mockito.mock(Path.class);
-        when(root.get("creationDate")).thenReturn(creationDatePath);
+    // Appliquer la spécification
+    spec.toPredicate(root, query, cb);
 
-        // Appliquer la spécification
-        spec.toPredicate(root, query, cb);
+    // Capturer les arguments passés à CriteriaBuilder.between
+    ArgumentCaptor<OffsetDateTime> lowerBoundCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
+    ArgumentCaptor<OffsetDateTime> upperBoundCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
 
-        // Capturer les arguments passés à CriteriaBuilder.between
-        ArgumentCaptor<OffsetDateTime> lowerBoundCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
-        ArgumentCaptor<OffsetDateTime> upperBoundCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
+    // Vérifier que between est bien appelé avec les bons arguments
+    verify(cb).between(
+        eq(creationDatePath), // Utilisation correcte de eq avec le champ simulé
+        lowerBoundCaptor.capture(),
+        upperBoundCaptor.capture()
+    );
 
-        // Vérifier que between est bien appelé avec les bons arguments
-        verify(cb).between(
-            eq(creationDatePath), // Utilisation correcte de eq avec le champ simulé
-            lowerBoundCaptor.capture(),
-            upperBoundCaptor.capture()
-        );
+    // Assert sur les arguments capturés : Comparaison flexible sur les dates
+    OffsetDateTime lowerBound = lowerBoundCaptor.getValue();
+    OffsetDateTime upperBound = upperBoundCaptor.getValue();
 
-        // Assert sur les arguments capturés
-        OffsetDateTime lowerBound = lowerBoundCaptor.getValue();
-        OffsetDateTime upperBound = upperBoundCaptor.getValue();
+    assertThat(lowerBound).isNotNull();
+    assertThat(upperBound).isNotNull();
 
-        assertThat(lowerBound).isNotNull();
-        assertThat(upperBound).isNotNull();
+    // Vérifiez que les dates capturées sont proches de la date attendue, avec une tolérance
+    OffsetDateTime expectedLowerBound = OffsetDateTime.now().minusDays(365); // Exemple de date attendue
+    OffsetDateTime expectedUpperBound = OffsetDateTime.now(); // Exemple de date attendue
 
-        // Ajoutez ici les assertions supplémentaires sur les valeurs capturées
-    }
+    assertThat(lowerBound).isCloseTo(expectedLowerBound, within(1, ChronoUnit.DAYS));
+    assertThat(upperBound).isCloseTo(expectedUpperBound, within(1, ChronoUnit.DAYS));
 }
