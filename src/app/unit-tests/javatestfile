@@ -1,6 +1,10 @@
 import { 
   buildFilters, 
-  buildQuickFiltersSubCriteria 
+  buildQuickFiltersSubCriteria, 
+  buildEqualDateCriteria,
+  buildContainsCriteria,
+  buildEqualCriteria,
+  buildSetCriteria
 } from './filter-builder';
 import { KemApiSearchableField, KemApiSearchCriteriaType, KemApiLogicSearchOperator } from './field-enum'; // Adaptez les imports
 
@@ -101,6 +105,50 @@ describe('FilterBuilder Functions', () => {
       expect(result.criterionType).toBe(KemApiSearchCriteriaType.IN_OPTIONS);
       expect(result.groupOperator).toBe(KemApiLogicSearchOperator.OR);
       expect(result.subCriteria).toHaveLength(2);
+    });
+  });
+
+  describe('buildEqualDateCriteria', () => {
+    it('should build an equal date criteria', () => {
+      const result = buildEqualDateCriteria(KemApiSearchableField.FieldEnum.DATE, '2023-09-04', false);
+      expect(result.criterionType).toBe(KemApiSearchCriteriaType.EQUAL_DATE);
+      expect(result.searchDateValue).toBe('2023-09-04');
+      expect(result.negated).toBe(false);
+    });
+  });
+
+  describe('buildContainsCriteria', () => {
+    it('should build a contains text criteria', () => {
+      const result = buildContainsCriteria(KemApiSearchableField.FieldEnum.TEXT, 'example', false);
+      expect(result.criterionType).toBe(KemApiSearchCriteriaType.TEXT);
+      expect(result.searchText).toBe('example');
+      expect(result.negated).toBe(false);
+    });
+  });
+
+  describe('buildEqualCriteria', () => {
+    it('should build an equal text criteria', () => {
+      const result = buildEqualCriteria(KemApiSearchableField.FieldEnum.TEXT, 'example', false);
+      expect(result.criterionType).toBe(KemApiSearchCriteriaType.EQUAL);
+      expect(result.searchValue).toBe('example');
+      expect(result.negated).toBe(false);
+    });
+
+    it('should build an equal number criteria', () => {
+      const result = buildEqualCriteria(KemApiSearchableField.FieldEnum.NUMBER, 42, false);
+      expect(result.criterionType).toBe(KemApiSearchCriteriaType.EQUAL);
+      expect(result.searchValue).toBe(42);
+      expect(result.negated).toBe(false);
+    });
+  });
+
+  describe('buildSetCriteria', () => {
+    it('should build a set criteria for multiple values', () => {
+      const result = buildSetCriteria(KemApiSearchableField.FieldEnum.ENUM, ['option1', 'option2']);
+      expect(result.criterionType).toBe(KemApiSearchCriteriaType.IN_OPTIONS);
+      expect(result.options).toContain('option1');
+      expect(result.options).toContain('option2');
+      expect(result.negated).toBe(false);
     });
   });
 
