@@ -1,65 +1,72 @@
-import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.assertj.core.api.Assertions.assertThat;
+import { Component, forwardRef } from '@angular/core';
+import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
-import javax.persistence.criteria.Path;
-import java.time.OffsetDateTime;
+@Component({
+  selector: 'app-multi-select-dropdown',
+  templateUrl: './multi-select-dropdown.component.html',
+  styleUrls: ['./multi-select-dropdown.component.css'],
+  providers: [
+    {
+      provide: NG_VALUE_ACCESSOR,
+      useExisting: forwardRef(() => MultiSelectDropdownComponent),
+      multi: true,
+    },
+  ],
+})
+export class MultiSelectDropdownComponent implements ControlValueAccessor {
+  options = [
+    { name: 'Option 1', selected: false },
+    { name: 'Option 2', selected: false },
+    { name: 'Option 3', selected: false },
+    { name: 'Option 4', selected: false }
+  ];
 
-public class MessageSpecificationBuilderTest {
+  private onChange: (value: any) => void = () => {};
+  private onTouched: () => void = () => {};
 
-    @Test
-    public void testCreateSpecificationElapsedTimeWithCapturedArguments() {
-        // Arrange
-        ApiSearchCriteriaDto criteria = MessageTestUtils.createInLapseTimeCriteria(ApiSearchableFieldDto.FieldEnum.CREATION_DATE);
-
-        ApiSearchRequestDto request = new ApiSearchRequestDto();
-        request.setLogicOperator(ApiLogicSearchOperatorDto.AND);
-        request.setCriteria(List.of(criteria));
-
-        Specification<KemmCanonicalMessage> spec = MessageSpecificationBuilder.buildSpecification(request);
-
-        // Mocking
-        Root<KemmCanonicalMessage> root = Mockito.mock(Root.class);
-        CriteriaQuery<?> query = Mockito.mock(CriteriaQuery.class);
-        CriteriaBuilder cb = Mockito.mock(CriteriaBuilder.class);
-
-        // Simuler le champ root.get("creationDate") pour éviter null
-        Path<OffsetDateTime> creationDatePath = Mockito.mock(Path.class);
-        Mockito.when(root.get("creationDate")).thenReturn(creationDatePath);
-
-        // Appliquer la spécification
-        spec.toPredicate(root, query, cb);
-
-        // Capturer les arguments passés à CriteriaBuilder.between
-        ArgumentCaptor<OffsetDateTime> lowerBoundCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
-        ArgumentCaptor<OffsetDateTime> upperBoundCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
-        ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
-
-        // Vérifier que between est bien appelé avec les bons arguments
-        verify(cb).between(
-            pathCaptor.capture(), // Capturer le premier argument (Path)
-            lowerBoundCaptor.capture(),
-            upperBoundCaptor.capture()
-        );
-
-        // Loggons les valeurs pour comprendre pourquoi le test échoue
-        System.out.println("Captured Path: " + pathCaptor.getValue());
-        System.out.println("Lower Bound: " + lowerBoundCaptor.getValue());
-        System.out.println("Upper Bound: " + upperBoundCaptor.getValue());
-
-        // Assert sur les arguments capturés
-        OffsetDateTime lowerBound = lowerBoundCaptor.getValue();
-        OffsetDateTime upperBound = upperBoundCaptor.getValue();
-
-        assertThat(lowerBound).isNotNull();
-        assertThat(upperBound).isNotNull();
-
-        // Ajouter des assertions supplémentaires selon la sortie
+  writeValue(value: any): void {
+    if (value) {
+      this.options.forEach(option => {
+        option.selected = value.includes(option.name);
+      });
     }
+  }
+
+  registerOnChange(fn: any): void {
+    this.onChange = fn;
+  }
+
+  registerOnTouched(fn: any): void {
+    this.onTouched = fn;
+  }
+
+  setDisabledState?(isDisabled: boolean): void {
+    // Implémente si nécessaire
+  }
+
+  toggleSelection(option: any) {
+    option.selected = !option.selected;
+    this.onChange(this.selectedOptions);
+  }
+
+  get selectedOptions() {
+    return this.options.filter(option => option.selected).map(option => option.name);
+  }
 }
+
+
+
+
+<button mat-button [matMenuTriggerFor]="menu">Sélectionner</button>
+<mat-menu #menu="matMenu">
+  <button mat-menu-item *ngFor="let option of options" (click)="toggleSelection(option)">
+    <mat-checkbox [checked]="option.selected">{{ option.name }}</mat-checkbox>
+  </button>
+</mat-menu>
+
+<div>
+  <p>Éléments sélectionnés :</p>
+  <ul>
+    <li *ngFor="let option of selectedOptions">{{ option }}</li>
+  </ul>
+</div>
