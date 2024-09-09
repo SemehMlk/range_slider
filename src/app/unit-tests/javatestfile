@@ -1,72 +1,66 @@
 import { Component, forwardRef } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatButtonModule } from '@angular/material/button';
+import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'app-multi-select-dropdown',
-  templateUrl: './multi-select-dropdown.component.html',
-  styleUrls: ['./multi-select-dropdown.component.css'],
+  selector: 'app-custom-select',
+  standalone: true,
+  templateUrl: './custom-select.component.html',
+  styleUrls: ['./custom-select.component.css'],
+  imports: [CommonModule, MatMenuModule, MatButtonModule],
   providers: [
     {
       provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => MultiSelectDropdownComponent),
+      useExisting: forwardRef(() => CustomSelectComponent),
       multi: true,
     },
   ],
 })
-export class MultiSelectDropdownComponent implements ControlValueAccessor {
-  options = [
-    { name: 'Option 1', selected: false },
-    { name: 'Option 2', selected: false },
-    { name: 'Option 3', selected: false },
-    { name: 'Option 4', selected: false }
-  ];
+export class CustomSelectComponent implements ControlValueAccessor {
+  options: string[] = ['Option 1', 'Option 2', 'Option 3'];
+  selectedValue: string | null = null;
 
+  // Callbacks pour ControlValueAccessor
   private onChange: (value: any) => void = () => {};
   private onTouched: () => void = () => {};
 
+  // Fonction appelée par Angular pour écrire la valeur dans le modèle
   writeValue(value: any): void {
-    if (value) {
-      this.options.forEach(option => {
-        option.selected = value.includes(option.name);
-      });
-    }
+    this.selectedValue = value;
   }
 
+  // Enregistrer une fonction pour notifier Angular des changements de valeur
   registerOnChange(fn: any): void {
     this.onChange = fn;
   }
 
+  // Enregistrer une fonction pour notifier Angular que l'utilisateur a touché l'élément
   registerOnTouched(fn: any): void {
     this.onTouched = fn;
   }
 
+  // Gérer l'état "disabled" si nécessaire
   setDisabledState?(isDisabled: boolean): void {
-    // Implémente si nécessaire
+    // Implémenter si tu as besoin de gérer le "disabled"
   }
 
-  toggleSelection(option: any) {
-    option.selected = !option.selected;
-    this.onChange(this.selectedOptions);
-  }
-
-  get selectedOptions() {
-    return this.options.filter(option => option.selected).map(option => option.name);
+  // Quand une option est sélectionnée
+  selectOption(option: string): void {
+    this.selectedValue = option;
+    this.onChange(option); // Notifier le changement de valeur
+    this.onTouched(); // Notifier que l'utilisateur a interagi avec le composant
   }
 }
 
 
+<!-- Bouton pour ouvrir le menu -->
+<button mat-button [matMenuTriggerFor]="menu">{{ selectedValue || 'Sélectionner une option' }}</button>
 
-
-<button mat-button [matMenuTriggerFor]="menu">Sélectionner</button>
+<!-- Le menu qui contient les options -->
 <mat-menu #menu="matMenu">
-  <button mat-menu-item *ngFor="let option of options" (click)="toggleSelection(option)">
-    <mat-checkbox [checked]="option.selected">{{ option.name }}</mat-checkbox>
+  <button mat-menu-item *ngFor="let option of options" (click)="selectOption(option)">
+    {{ option }}
   </button>
 </mat-menu>
-
-<div>
-  <p>Éléments sélectionnés :</p>
-  <ul>
-    <li *ngFor="let option of selectedOptions">{{ option }}</li>
-  </ul>
-</div>
