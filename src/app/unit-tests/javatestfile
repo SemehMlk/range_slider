@@ -1,9 +1,10 @@
-public toggleEditableState(): void {
-  // Vérifier si tous les critères sont valides et mettre à jour leur état
-  this.criterias.forEach((criteria, index) => {
-    if (this.isFilterValid(criteria)) {
-      criteria.isEditable = false; // Si valide, rendre non éditable
-    }
-  });
-}
+public onFilterFocusOut(index: number): void {
+  const criteria = this.criterias[index];
 
+  // Vérifier si le critère est valide lors de la perte de focus
+  if (this.isFilterValid(criteria)) {
+    criteria.isEditable = false; // Si valide, rendre non éditable
+  }
+
+  this.updateFilters();
+}
