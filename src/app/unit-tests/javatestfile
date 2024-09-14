@@ -1,10 +1,128 @@
-public onFilterFocusOut(index: number): void {
-  const criteria = this.criterias[index];
+import { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { FilterCriteria } from './models/filter-criteria';
 
-  // Vérifier si le critère est valide lors de la perte de focus
-  if (this.isFilterValid(criteria)) {
-    criteria.isEditable = false; // Si valide, rendre non éditable
+@Injectable({
+  providedIn: 'root',
+})
+export class FilterCriteriaService {
+  private criteriasSubject = new BehaviorSubject<FilterCriteria[]>([]);
+  public criterias$: Observable<FilterCriteria[]> = this.criteriasSubject.asObservable();
+
+  // Ajouter un critère
+  addCriteria(newCriteria: FilterCriteria): void {
+    const currentCriterias = this.criteriasSubject.getValue();
+    currentCriterias.push(newCriteria);
+    this.criteriasSubject.next(currentCriterias);
   }
 
-  this.updateFilters();
+  // Mettre à jour un critère existant
+  updateCriteria(updatedCriteria: FilterCriteria, index: number): void {
+    const currentCriterias = this.criteriasSubject.getValue();
+    currentCriterias[index] = updatedCriteria;
+    this.criteriasSubject.next(currentCriterias);
+  }
+
+  // Supprimer un critère
+  removeCriteria(index: number): void {
+    const currentCriterias = this.criteriasSubject.getValue();
+    currentCriterias.splice(index, 1);
+    this.criteriasSubject.next(currentCriterias);
+  }
+
+  // Obtenir tous les critères
+  getCriterias(): FilterCriteria[] {
+    return this.criteriasSubject.getValue();
+  }
+
+  // Réinitialiser tous les critères
+  resetCriterias(): void {
+    this.criteriasSubject.next([]);
+  }
+}
+
+
+
+
+
+
+
+import { Component, OnInit } from '@angular/core';
+import { FilterCriteriaService } from './services/filter-criteria.service';
+import { FilterCriteria } from './models/filter-criteria';
+import { Subscription } from 'rxjs';
+
+@Component({
+  selector: 'flows-filter-sidebar',
+  templateUrl: './flows-filter-sidebar.component.html',
+  styleUrls: ['./flows-filter-sidebar.component.scss']
+})
+export class FlowsFilterSidebarComponent implements OnInit {
+  public criterias: FilterCriteria[] = [];
+  private subscription: Subscription;
+
+  constructor(private filterCriteriaService: FilterCriteriaService) {}
+
+  ngOnInit(): void {
+    // S'abonner aux changements des critères
+    this.subscription = this.filterCriteriaService.criterias$.subscribe(
+      (criterias) => {
+        this.criterias = criterias;
+      }
+    );
+  }
+
+  // Ajouter un nouveau critère
+  public addFilter(field: any): void {
+    const newCriteria: FilterCriteria = {
+      field,
+      operator: 'EQUAL',
+      value: null,
+      fieldType: field.fieldType,
+      isEditable: true,
+    };
+
+    this.filterCriteriaService.addCriteria(newCriteria);
+  }
+
+  // Mettre à jour un critère après modification
+  public onFilterValueChange(criteria: FilterCriteria, index: number): void {
+    // Mettez à jour le critère dans le service
+    this.filterCriteriaService.updateCriteria(criteria, index);
+  }
+
+  // Méthode pour gérer la perte de focus d'un critère
+  public onFilterFocusOut(index: number): void {
+    const criteria = this.criterias[index];
+
+    // Si le critère est valide, le rendre non éditable
+    if (this.isFilterValid(criteria)) {
+      criteria.isEditable = false;
+      this.filterCriteriaService.updateCriteria(criteria, index);
+    }
+  }
+
+  // Validation d'un critère
+  public isFilterValid(criteria: FilterCriteria): boolean {
+    switch (criteria.operator) {
+      case 'BETWEEN':
+        return criteria.value?.min != null && criteria.value?.max != null;
+      case 'IN':
+      case 'NOT_IN':
+        return Array.isArray(criteria.value) && criteria.value.length > 0;
+      default:
+        return criteria.value != null;
+    }
+  }
+
+  // Supprimer tous les critères
+  public removeAllFilters(): void {
+    this.filterCriteriaService.resetCriterias();
+  }
+
+  ngOnDestroy(): void {
+    if (this.subscription) {
+      this.subscription.unsubscribe();
+    }
+  }
 }
