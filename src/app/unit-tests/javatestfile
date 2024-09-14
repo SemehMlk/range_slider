@@ -1,96 +1,21 @@
-import { Component, OnInit } from '@angular/core';
-import { FilterCriteriaService } from './services/filter-criteria.service';
-import { FilterCriteria } from './models/filter-criteria';
-import { Subscription } from 'rxjs';
-
-@Component({
-  selector: 'flows-filter-sidebar',
-  templateUrl: './flows-filter-sidebar.component.html',
-  styleUrls: ['./flows-filter-sidebar.component.scss']
-})
-export class FlowsFilterSidebarComponent implements OnInit {
-  public criterias: FilterCriteria[] = [];
-  private subscription: Subscription;
-
-  constructor(private filterCriteriaService: FilterCriteriaService) {}
-
-  ngOnInit(): void {
-    // S'abonner aux changements des critères
-    this.subscription = this.filterCriteriaService.criterias$.subscribe(
-      (criterias) => {
-        this.criterias = criterias;
-      }
-    );
-  }
-
-  // Ajouter un nouveau critère
-  public addFilter(field: any): void {
-    const newCriteria: FilterCriteria = {
-      field,
-      operator: 'EQUAL',
-      value: null,
-      fieldType: field.fieldType,
-      isEditable: true,
-    };
-
-    this.filterCriteriaService.addCriteria(newCriteria);
-  }
-
-  // Méthode pour mettre à jour la valeur d'un critère (par exemple pour un type date ou multiselect)
-  public updateCriteriaValue(criteria: FilterCriteria, value: any, index: number): void {
-    criteria.value = value;
-    this.filterCriteriaService.updateCriteria(criteria, index);
-  }
-
-  // Méthode pour mettre à jour l'opérateur d'un critère (comme BETWEEN, IN, EQUAL, etc.)
-  public updateCriteriaOperator(criteria: FilterCriteria, operator: string, index: number): void {
-    criteria.operator = operator;
-    criteria.value = null; // Reset la valeur si l'opérateur change
-    this.filterCriteriaService.updateCriteria(criteria, index);
-  }
-
-  // Méthode pour basculer l'état editable/non-editable d'un critère (par exemple, sur un double-clic)
-  public toggleEditableState(index: number): void {
-    const criteria = this.criterias[index];
-    criteria.isEditable = !criteria.isEditable;
-    this.filterCriteriaService.updateCriteria(criteria, index);
-  }
-
-  // Validation d'un critère pour savoir s'il peut être rendu non éditable
-  public isFilterValid(criteria: FilterCriteria): boolean {
-    switch (criteria.operator) {
-      case 'BETWEEN':
-        return criteria.value?.min != null && criteria.value?.max != null;
-      case 'IN':
-      case 'NOT_IN':
-        return Array.isArray(criteria.value) && criteria.value.length > 0;
-      default:
-        return criteria.value != null;
-    }
-  }
-
-  // Méthode pour gérer la perte de focus d'un critère (validation automatique)
-  public onFilterFocusOut(index: number): void {
-    const criteria = this.criterias[index];
+// Ajouter un nouveau critère
+public addFilter(field: any): void {
+  // Rendre les critères existants non éditables s'ils sont valides
+  this.criterias.forEach((criteria, index) => {
     if (this.isFilterValid(criteria)) {
-      criteria.isEditable = false; // Si valide, rendre non éditable
+      criteria.isEditable = false;
       this.filterCriteriaService.updateCriteria(criteria, index);
     }
-  }
+  });
 
-  // Supprimer un critère
-  public removeFilter(index: number): void {
-    this.filterCriteriaService.removeCriteria(index);
-  }
+  // Ajouter un nouveau critère en mode éditable
+  const newCriteria: FilterCriteria = {
+    field,
+    operator: 'EQUAL', // Vous pouvez ajuster l'opérateur par défaut
+    value: null,
+    fieldType: field.fieldType,
+    isEditable: true, // Le nouveau critère est toujours éditable
+  };
 
-  // Supprimer tous les critères
-  public removeAllFilters(): void {
-    this.filterCriteriaService.resetCriterias();
-  }
-
-  ngOnDestroy(): void {
-    if (this.subscription) {
-      this.subscription.unsubscribe();
-    }
-  }
+  this.filterCriteriaService.addCriteria(newCriteria);
 }
