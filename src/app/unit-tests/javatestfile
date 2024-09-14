@@ -1,52 +1,3 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { FilterCriteria } from './models/filter-criteria';
-
-@Injectable({
-  providedIn: 'root',
-})
-export class FilterCriteriaService {
-  private criteriasSubject = new BehaviorSubject<FilterCriteria[]>([]);
-  public criterias$: Observable<FilterCriteria[]> = this.criteriasSubject.asObservable();
-
-  // Ajouter un critère
-  addCriteria(newCriteria: FilterCriteria): void {
-    const currentCriterias = this.criteriasSubject.getValue();
-    currentCriterias.push(newCriteria);
-    this.criteriasSubject.next(currentCriterias);
-  }
-
-  // Mettre à jour un critère existant
-  updateCriteria(updatedCriteria: FilterCriteria, index: number): void {
-    const currentCriterias = this.criteriasSubject.getValue();
-    currentCriterias[index] = updatedCriteria;
-    this.criteriasSubject.next(currentCriterias);
-  }
-
-  // Supprimer un critère
-  removeCriteria(index: number): void {
-    const currentCriterias = this.criteriasSubject.getValue();
-    currentCriterias.splice(index, 1);
-    this.criteriasSubject.next(currentCriterias);
-  }
-
-  // Obtenir tous les critères
-  getCriterias(): FilterCriteria[] {
-    return this.criteriasSubject.getValue();
-  }
-
-  // Réinitialiser tous les critères
-  resetCriterias(): void {
-    this.criteriasSubject.next([]);
-  }
-}
-
-
-
-
-
-
-
 import { Component, OnInit } from '@angular/core';
 import { FilterCriteriaService } from './services/filter-criteria.service';
 import { FilterCriteria } from './models/filter-criteria';
@@ -86,8 +37,8 @@ export class FlowsFilterSidebarComponent implements OnInit {
   }
 
   // Mettre à jour un critère après modification
-  public onFilterValueChange(criteria: FilterCriteria, index: number): void {
-    // Mettez à jour le critère dans le service
+  public updateCriteriaValue(criteria: FilterCriteria, value: any, index: number): void {
+    criteria.value = value;
     this.filterCriteriaService.updateCriteria(criteria, index);
   }
 
@@ -113,6 +64,18 @@ export class FlowsFilterSidebarComponent implements OnInit {
       default:
         return criteria.value != null;
     }
+  }
+
+  // Supprimer un critère
+  public removeFilter(index: number): void {
+    this.filterCriteriaService.removeCriteria(index);
+  }
+
+  // Rendre un critère éditable
+  public makeFilterEditable(index: number): void {
+    const criteria = this.criterias[index];
+    criteria.isEditable = true;
+    this.filterCriteriaService.updateCriteria(criteria, index);
   }
 
   // Supprimer tous les critères
