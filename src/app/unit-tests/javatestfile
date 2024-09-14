@@ -36,24 +36,27 @@ export class FlowsFilterSidebarComponent implements OnInit {
     this.filterCriteriaService.addCriteria(newCriteria);
   }
 
-  // Mettre à jour un critère après modification
+  // Méthode pour mettre à jour la valeur d'un critère (par exemple pour un type date ou multiselect)
   public updateCriteriaValue(criteria: FilterCriteria, value: any, index: number): void {
     criteria.value = value;
     this.filterCriteriaService.updateCriteria(criteria, index);
   }
 
-  // Méthode pour gérer la perte de focus d'un critère
-  public onFilterFocusOut(index: number): void {
-    const criteria = this.criterias[index];
-
-    // Si le critère est valide, le rendre non éditable
-    if (this.isFilterValid(criteria)) {
-      criteria.isEditable = false;
-      this.filterCriteriaService.updateCriteria(criteria, index);
-    }
+  // Méthode pour mettre à jour l'opérateur d'un critère (comme BETWEEN, IN, EQUAL, etc.)
+  public updateCriteriaOperator(criteria: FilterCriteria, operator: string, index: number): void {
+    criteria.operator = operator;
+    criteria.value = null; // Reset la valeur si l'opérateur change
+    this.filterCriteriaService.updateCriteria(criteria, index);
   }
 
-  // Validation d'un critère
+  // Méthode pour basculer l'état editable/non-editable d'un critère (par exemple, sur un double-clic)
+  public toggleEditableState(index: number): void {
+    const criteria = this.criterias[index];
+    criteria.isEditable = !criteria.isEditable;
+    this.filterCriteriaService.updateCriteria(criteria, index);
+  }
+
+  // Validation d'un critère pour savoir s'il peut être rendu non éditable
   public isFilterValid(criteria: FilterCriteria): boolean {
     switch (criteria.operator) {
       case 'BETWEEN':
@@ -66,16 +69,18 @@ export class FlowsFilterSidebarComponent implements OnInit {
     }
   }
 
+  // Méthode pour gérer la perte de focus d'un critère (validation automatique)
+  public onFilterFocusOut(index: number): void {
+    const criteria = this.criterias[index];
+    if (this.isFilterValid(criteria)) {
+      criteria.isEditable = false; // Si valide, rendre non éditable
+      this.filterCriteriaService.updateCriteria(criteria, index);
+    }
+  }
+
   // Supprimer un critère
   public removeFilter(index: number): void {
     this.filterCriteriaService.removeCriteria(index);
-  }
-
-  // Rendre un critère éditable
-  public makeFilterEditable(index: number): void {
-    const criteria = this.criterias[index];
-    criteria.isEditable = true;
-    this.filterCriteriaService.updateCriteria(criteria, index);
   }
 
   // Supprimer tous les critères
