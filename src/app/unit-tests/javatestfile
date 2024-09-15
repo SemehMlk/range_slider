@@ -1,21 +1,3 @@
-// Ajouter un nouveau critère
-public addFilter(field: any): void {
-  // Rendre les critères existants non éditables s'ils sont valides
-  this.criterias.forEach((criteria, index) => {
-    if (this.isFilterValid(criteria)) {
-      criteria.isEditable = false;
-      this.filterCriteriaService.updateCriteria(criteria, index);
-    }
-  });
-
-  // Ajouter un nouveau critère en mode éditable
-  const newCriteria: FilterCriteria = {
-    field,
-    operator: 'EQUAL', // Vous pouvez ajuster l'opérateur par défaut
-    value: null,
-    fieldType: field.fieldType,
-    isEditable: true, // Le nouveau critère est toujours éditable
-  };
-
-  this.filterCriteriaService.addCriteria(newCriteria);
-}
+ private isNumberRange(value: number | NumberRange): value is NumberRange {
+    return value != null && typeof (value as NumberRange).min !== 'undefined' && typeof (value as NumberRange).max !== 'undefined';
+  }
