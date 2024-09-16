@@ -1,12 +1,40 @@
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class DateTimeUtil {
 
-    // Méthode pour retourner la date actuelle formatée en 'yyyy-MM-ddTHH:mm:ss'
+    private static Clock clock = Clock.systemDefaultZone(); // Default system clock
+
+    // Permet de changer l'horloge pour les tests
+    public static void setClock(Clock newClock) {
+        clock = newClock;
+    }
+
     public static String getCurrentFormattedDate() {
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        LocalDateTime now = LocalDateTime.now(clock);  // Utiliser l'horloge mockée
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Constants.DATE_TIME_FORMAT);
         return now.format(formatter);
     }
+}
+
+
+@Test
+public void testConvertWithMockedDate() {
+    // Mock de l'horloge pour une date fixe
+    LocalDateTime fixedDate = LocalDateTime.parse("9999-12-31T00:00:00");
+    Clock fixedClock = Clock.fixed(fixedDate.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
+
+    // Fixer l'horloge dans KemmTimeProvider et DateTimeUtil
+    KemmTimeProvider.useFixedClockAt(fixedDate);
+    DateTimeUtil.setClock(fixedClock);
+
+    // Appeler la méthode que tu veux tester
+    OutputMessage actual = swiftConverterService.convertMessage(
+        MappingType.builder().mappingKey("mappingKey").build(),
+        "msgContent".getBytes(), "inputType", new ArrayList<>()
+    );
+
+    // Vérifier que la date dans le résultat est celle que tu as mockée
+    assertThat(actual).isEqualTo(new OutputMessage(...)); // Contenu attendu avec la date mockée
 }
