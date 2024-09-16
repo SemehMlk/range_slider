@@ -1,87 +1,12 @@
-export interface DateRange {
-  minDate: Date | null;
-  maxDate: Date | null;
-}
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
-export interface ElapsedTime {
-  timeLapse: number;
-  timeUnit: string;
-}
+public class DateTimeUtil {
 
-
-import { Component, Input, Output, EventEmitter, OnInit, ChangeDetectorRef } from '@angular/core';
-import { FlxApiConditionOperator } from 'src/app/shared/models/flx-api-operators'; // Ajustez cet import
-import { DateRange, ElapsedTime } from './models/date-types';  // Ajustez cet import
-
-@Component({
-  selector: 'flx-date-type-filter',
-  templateUrl: './date-type-filter.component.html',
-  styleUrls: ['./date-type-filter.component.scss'],
-})
-export class DateTypeFilterComponent implements OnInit {
-  @Input() set criteria(data: { operator: FlxApiConditionOperator, value: Date | DateRange | ElapsedTime }) {
-    this._operator = data.operator;
-    this.value = this.initialValue(data.value);
-  }
-
-  @Output() readonly filterChange = new EventEmitter<Date | DateRange | ElapsedTime>();
-
-  public value: Date | DateRange | ElapsedTime = null;
-  private _operator: FlxApiConditionOperator;
-
-  timeLapseUnits: string[] = ['HOUR', 'DAY', 'WEEK', 'MONTH', 'YEAR'];  // Ajustez selon votre logique
-
-  constructor(private cdr: ChangeDetectorRef) {}
-
-  ngOnInit(): void {
-    this.cdr.detectChanges();
-  }
-
-  // Détermine la valeur initiale en fonction de l'opérateur
-  private initialValue(value: Date | DateRange | ElapsedTime): Date | DateRange | ElapsedTime {
-    if (this.isBetweenOperator()) {
-      return this.isDateRange(value) ? value : { minDate: null, maxDate: null };
-    } else if (this.isInLastTimeLapseOperator()) {
-      return this.isElapsedTime(value) ? value : { timeLapse: 24, timeUnit: 'HOUR' };
-    } else {
-      return value instanceof Date ? value : null;
+    // Méthode pour retourner la date actuelle formatée en 'yyyy-MM-ddTHH:mm:ss'
+    public static String getCurrentFormattedDate() {
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+        return now.format(formatter);
     }
-  }
-
-  // Vérifie si l'opérateur est BETWEEN
-  get isBetweenOperator(): boolean {
-    return this._operator === FlxApiConditionOperator.BETWEEN;
-  }
-
-  // Vérifie si l'opérateur est IN_LAST_TIME_LAPSE
-  get isInLastTimeLapseOperator(): boolean {
-    return this._operator === FlxApiConditionOperator.IN_LAST_TIME_LAPSE;
-  }
-
-  // Vérifie si un opérateur est défini
-  get hasOperator(): boolean {
-    return !!this._operator;
-  }
-
-  // Vérifie si la valeur est un DateRange
-  private isDateRange(value: Date | DateRange | ElapsedTime): value is DateRange {
-    return value != null && (value as DateRange).minDate !== undefined && (value as DateRange).maxDate !== undefined;
-  }
-
-  // Vérifie si la valeur est un ElapsedTime
-  private isElapsedTime(value: Date | DateRange | ElapsedTime): value is ElapsedTime {
-    return value != null && (value as ElapsedTime).timeLapse !== undefined && (value as ElapsedTime).timeUnit !== undefined;
-  }
-
-  // Gestion des changements de date (simple ou range)
-  public onDateChange(): void {
-    this.filterChange.emit(this.value);
-  }
-
-  // Gestion des changements de laps de temps
-  public onElapsedTimeChange(): void {
-    if (this.isElapsedTime(this.value)) {
-      this.filterChange.emit(this.value);
-    }
-  }
 }
