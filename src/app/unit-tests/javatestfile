@@ -1,1 +1,35 @@
-    public static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+import org.junit.jupiter.api.Test;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+public class KemmTimeProviderTest {
+
+    @Test
+    public void testUseFixedClockAt() {
+        // Fixer une date statique
+        LocalDateTime fixedDate = LocalDateTime.parse("2024-12-25T10:15:30");
+
+        // Appeler la méthode pour fixer l'horloge
+        KemmTimeProvider.useFixedClockAt(fixedDate);
+
+        // Récupérer l'horloge
+        Clock clock = KemmTimeProvider.getClock();
+
+        // Vérifier que l'horloge est bien fixée à la date spécifiée
+        LocalDateTime currentDateTime = LocalDateTime.now(clock);
+        assertEquals(fixedDate, currentDateTime, "L'heure courante doit correspondre à la date fixée");
+    }
+
+    @Test
+    public void testSystemClockIsDefault() {
+        // Récupérer l'horloge système par défaut
+        Clock systemClock = KemmTimeProvider.getClock();
+
+        // Vérifier que l'horloge par défaut est l'horloge système
+        assertNotNull(systemClock, "L'horloge système ne doit pas être nulle");
+        assertEquals(ZoneId.systemDefault(), systemClock.getZone(), "L'horloge par défaut doit être celle du système");
+    }
+}
