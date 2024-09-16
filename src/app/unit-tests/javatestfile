@@ -22,3 +22,20 @@ public void testConvertWithMockedDate() {
     // Vérifier que la date dans le résultat est celle que tu as mockée
     assertThat(actual).isEqualTo(new OutputMessage(...)); // Contenu attendu avec la date mockée
 }
+
+
+
+
+
+public class KemmTimeProvider {
+
+    private static Clock clock = Clock.systemDefaultZone();
+
+    public static Clock getClock() {
+        return clock;
+    }
+
+    public static void useFixedClockAt(LocalDateTime date) {
+        clock = Clock.fixed(date.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
+    }
+}
