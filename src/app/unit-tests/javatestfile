@@ -1,111 +1,54 @@
-import org.openapitools.model.StreamDTO;
-import org.openapitools.model.MqStreamDTO;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import javax.validation.Valid;
-import javax.validation.constraints.NotEmpty;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Service
-public class StreamService implements StreamApiDelegate {
+@ControllerAdvice
+public class GlobalExceptionHandler {
 
-    private static final int UP_STREAM_QUEUE_MIN_LENGTH = 6; // Hypothèse d'une longueur minimale
-    private static final int UP_STREAM_QUEUE_THIRD_CHARACTER = 2; // Index 2 pour la troisième position
-    private static final int UP_STREAM_QUEUE_SIXTH_CHARACTER = 5; // Index 5 pour la sixième position
-    private static final String SND_FLEX_TO = "SND_FLEX_TO_";
-    private static final String RCV_ = "RCV_";
+    // Gestion des exceptions de validation au niveau des méthodes/entités
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ProblemDetail handleConstraintViolationException(ConstraintViolationException ex) {
+        // Crée un objet ProblemDetail avec le statut HTTP 400 (Bad Request)
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Validation Error");
+        problemDetail.setDetail("Constraint violation occurred");
 
-    private final StreamRepository streamRepository;
-
-    public StreamService(StreamRepository streamRepository) {
-        this.streamRepository = streamRepository;
-    }
-
-    @Override
-    @Transactional
-    public ResponseEntity<List<Void>> importStreams(@NotNull @Valid @NotEmpty List<StreamDTO> streams) {
-
-        // Générer les propriétés supplémentaires pour chaque stream (dont l'alias) avant la sauvegarde
-        List<KemmStream> entities = streams.stream()
-            .map(this::handleStreamAndConvertToEntity) // Appel de la méthode qui gère le cast
+        // Récupère toutes les violations et les formate
+        Set<ConstraintViolation<?>> violations = ex.getConstraintViolations();
+        List<String> errors = violations.stream()
+            .map(violation -> String.format("Field '%s' %s", 
+                    violation.getPropertyPath(), 
+                    violation.getMessage()))
             .collect(Collectors.toList());
 
-        // Récupérer les alias générés pour vérifier s'ils existent déjà dans la base de données
-        Set<String> generatedAliases = entities.stream()
-            .map(KemmStream::getAlias)
-            .collect(Collectors.toSet());
+        // Ajoute une propriété personnalisée "errors" avec les détails des contraintes violées
+        problemDetail.setProperty("errors", errors);
 
-        // Vérifier si certains alias existent déjà dans la base de données
-        Set<String> existingAliases = findExistingAliases(generatedAliases);
-        if (!existingAliases.isEmpty()) {
-            throw new InvalidRequestException(ApiErrorCodes.INVALID_SEARCH_REQUEST, 
-                List.of("These aliases already exist: " + String.join(", ", existingAliases)));
-        }
-
-        // Sauvegarder les entités dans la base de données si tout est correct
-        streamRepository.saveAll(entities);
-
-        return ResponseEntity.ok(new ArrayList<>());
+        return problemDetail;
     }
 
-    /**
-     * Gère le cast de StreamDTO en MqStreamDTO et génère les propriétés si nécessaire.
-     * @param streamDTO Le DTO du stream à traiter.
-     * @return L'entité KemmStream avec les propriétés générées.
-     */
-    private KemmStream handleStreamAndConvertToEntity(StreamDTO streamDTO) {
-        if (streamDTO instanceof MqStreamDTO) {
-            MqStreamDTO mqStreamDTO = (MqStreamDTO) streamDTO;
-            return generateAdditionalPropertiesAndConvertToEntity(mqStreamDTO);
-        } else {
-            // Si le streamDTO n'est pas un MqStreamDTO, lancer une exception ou gérer autrement.
-            throw new IllegalArgumentException("Expected MqStreamDTO, but got " + streamDTO.getClass().getSimpleName());
-        }
+    // Gestion des erreurs de validation lors de l'utilisation de @Valid sur les DTO
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ProblemDetail handleValidationExceptions(MethodArgumentNotValidException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        problemDetail.setTitle("Validation Error");
+        problemDetail.setDetail("One or more fields failed validation");
+
+        List<String> errors = ex.getBindingResult().getFieldErrors().stream()
+            .map(fieldError -> String.format("Field '%s' %s", fieldError.getField(), fieldError.getDefaultMessage()))
+            .collect(Collectors.toList());
+
+        problemDetail.setProperty("errors", errors);
+
+        return problemDetail;
     }
 
-    /**
-     * Traite la file d'attente upStreamQueue et génère les alias et la direction si nécessaire pour un MqStreamDTO.
-     * @param mqStreamDTO Le DTO du stream à traiter.
-     * @return L'entité KemmStream avec les propriétés générées.
-     */
-    private KemmStream generateAdditionalPropertiesAndConvertToEntity(MqStreamDTO mqStreamDTO) {
-        String upStreamQueue = mqStreamDTO.getUpStreamQueue();
-
-        if (upStreamQueue != null && !upStreamQueue.trim().isEmpty() && upStreamQueue.length() >= UP_STREAM_QUEUE_MIN_LENGTH) {
-            // Génération de l'alias et de la direction en fonction des règles définies
-            String aliasPart = upStreamQueue.substring(UP_STREAM_QUEUE_THIRD_CHARACTER, UP_STREAM_QUEUE_SIXTH_CHARACTER);
-
-            if ("FLX".equals(aliasPart)) {
-                mqStreamDTO.setAlias(SND_FLEX_TO + upStreamQueue.substring(UP_STREAM_QUEUE_THIRD_CHARACTER));
-                mqStreamDTO.setDirection(KemmStreamDirectionEnum.OUTBOUND); // OUTBOUND direction
-            } else {
-                mqStreamDTO.setAlias(RCV_ + upStreamQueue.substring(UP_STREAM_QUEUE_THIRD_CHARACTER) + "_TO_FLEX");
-                mqStreamDTO.setDirection(KemmStreamDirectionEnum.INBOUND); // INBOUND direction
-            }
-        }
-
-        // Convertir en entité KemmStream avant la sauvegarde
-        return convertToEntity(mqStreamDTO);
-    }
-
-    // Méthode pour convertir le MqStreamDTO en entité KemmStream
-    private KemmStream convertToEntity(MqStreamDTO mqStreamDTO) {
-        KemmStream stream = new KemmStream();
-        stream.setAlias(mqStreamDTO.getAlias());
-        stream.setDirection(mqStreamDTO.getDirection());
-        // Ajouter d'autres mappages si nécessaire
-        return stream;
-    }
-
-    // Méthode pour trouver les alias existants dans la base de données
-    private Set<String> findExistingAliases(Set<String> aliases) {
-        return streamRepository.findByAliasIn(aliases)
-                .stream()
-                .map(KemmStream::getAlias)
-                .collect(Collectors.toSet());
-    }
+    // Autres gestionnaires d'exceptions si nécessaire...
 }
