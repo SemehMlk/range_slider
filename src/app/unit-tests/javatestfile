@@ -1,11 +1,11 @@
-private String formatFieldError(FieldError fieldError) {
-    String fieldName = fieldError.getField();
-    String objectName = fieldError.getObjectName(); // Le nom du modèle, par exemple "MqStreamDTO"
+  private String formatConstraintViolation(ConstraintViolation<?> violation) {
+        String propertyPath = violation.getPropertyPath().toString();
 
-    // Retirer l'indice du tableau
-    if (fieldName.contains("[") && fieldName.contains("]")) {
-        fieldName = fieldName.replaceAll("\\[\\d+\\]", "");
+        // Supprimer l'indice du tableau, s'il est présent (par exemple, '[0]')
+        if (propertyPath.contains("[") && propertyPath.contains("]")) {
+            propertyPath = propertyPath.replaceAll("\\[\\d+\\]", "");  // Supprime l'indice
+        }
+
+        // Retourne un message formaté comme : "Field 'upstreamQueue' must not be null"
+        return String.format("Field '%s' %s", propertyPath, violation.getMessage());
     }
-
-    return String.format("In '%s', field '%s' %s", objectName, fieldName, fieldError.getDefaultMessage());
-}
