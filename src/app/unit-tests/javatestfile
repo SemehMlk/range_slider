@@ -1,54 +1,11 @@
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.ConstraintViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ExceptionHandler;
+private String formatFieldError(FieldError fieldError) {
+    String fieldName = fieldError.getField();
+    String objectName = fieldError.getObjectName(); // Le nom du modèle, par exemple "MqStreamDTO"
 
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-@ControllerAdvice
-public class GlobalExceptionHandler {
-
-    // Gestion des exceptions de validation au niveau des méthodes/entités
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ProblemDetail handleConstraintViolationException(ConstraintViolationException ex) {
-        // Crée un objet ProblemDetail avec le statut HTTP 400 (Bad Request)
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setTitle("Validation Error");
-        problemDetail.setDetail("Constraint violation occurred");
-
-        // Récupère toutes les violations et les formate
-        Set<ConstraintViolation<?>> violations = ex.getConstraintViolations();
-        List<String> errors = violations.stream()
-            .map(violation -> String.format("Field '%s' %s", 
-                    violation.getPropertyPath(), 
-                    violation.getMessage()))
-            .collect(Collectors.toList());
-
-        // Ajoute une propriété personnalisée "errors" avec les détails des contraintes violées
-        problemDetail.setProperty("errors", errors);
-
-        return problemDetail;
+    // Retirer l'indice du tableau
+    if (fieldName.contains("[") && fieldName.contains("]")) {
+        fieldName = fieldName.replaceAll("\\[\\d+\\]", "");
     }
 
-    // Gestion des erreurs de validation lors de l'utilisation de @Valid sur les DTO
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ProblemDetail handleValidationExceptions(MethodArgumentNotValidException ex) {
-        ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-        problemDetail.setTitle("Validation Error");
-        problemDetail.setDetail("One or more fields failed validation");
-
-        List<String> errors = ex.getBindingResult().getFieldErrors().stream()
-            .map(fieldError -> String.format("Field '%s' %s", fieldError.getField(), fieldError.getDefaultMessage()))
-            .collect(Collectors.toList());
-
-        problemDetail.setProperty("errors", errors);
-
-        return problemDetail;
-    }
-
-    // Autres gestionnaires d'exceptions si nécessaire...
+    return String.format("In '%s', field '%s' %s", objectName, fieldName, fieldError.getDefaultMessage());
 }
