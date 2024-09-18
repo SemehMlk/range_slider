@@ -1,4 +1,5 @@
 import org.openapitools.model.StreamDTO;
+import org.openapitools.model.MqStreamDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,7 @@ public class StreamService implements StreamApiDelegate {
 
         // Générer les propriétés supplémentaires pour chaque stream (dont l'alias) avant la sauvegarde
         List<KemmStream> entities = streams.stream()
-            .map(this::generateAdditionalPropertiesAndConvertToEntity)
+            .map(this::handleStreamAndConvertToEntity) // Appel de la méthode qui gère le cast
             .collect(Collectors.toList());
 
         // Récupérer les alias générés pour vérifier s'ils existent déjà dans la base de données
@@ -52,35 +53,50 @@ public class StreamService implements StreamApiDelegate {
     }
 
     /**
-     * Traite la file d'attente upStreamQueue et génère les alias et la direction si nécessaire.
+     * Gère le cast de StreamDTO en MqStreamDTO et génère les propriétés si nécessaire.
      * @param streamDTO Le DTO du stream à traiter.
      * @return L'entité KemmStream avec les propriétés générées.
      */
-    private KemmStream generateAdditionalPropertiesAndConvertToEntity(StreamDTO streamDTO) {
-        String upStreamQueue = streamDTO.getUpStreamQueue();
+    private KemmStream handleStreamAndConvertToEntity(StreamDTO streamDTO) {
+        if (streamDTO instanceof MqStreamDTO) {
+            MqStreamDTO mqStreamDTO = (MqStreamDTO) streamDTO;
+            return generateAdditionalPropertiesAndConvertToEntity(mqStreamDTO);
+        } else {
+            // Si le streamDTO n'est pas un MqStreamDTO, lancer une exception ou gérer autrement.
+            throw new IllegalArgumentException("Expected MqStreamDTO, but got " + streamDTO.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * Traite la file d'attente upStreamQueue et génère les alias et la direction si nécessaire pour un MqStreamDTO.
+     * @param mqStreamDTO Le DTO du stream à traiter.
+     * @return L'entité KemmStream avec les propriétés générées.
+     */
+    private KemmStream generateAdditionalPropertiesAndConvertToEntity(MqStreamDTO mqStreamDTO) {
+        String upStreamQueue = mqStreamDTO.getUpStreamQueue();
 
         if (upStreamQueue != null && !upStreamQueue.trim().isEmpty() && upStreamQueue.length() >= UP_STREAM_QUEUE_MIN_LENGTH) {
             // Génération de l'alias et de la direction en fonction des règles définies
             String aliasPart = upStreamQueue.substring(UP_STREAM_QUEUE_THIRD_CHARACTER, UP_STREAM_QUEUE_SIXTH_CHARACTER);
 
             if ("FLX".equals(aliasPart)) {
-                streamDTO.setAlias(SND_FLEX_TO + upStreamQueue.substring(UP_STREAM_QUEUE_THIRD_CHARACTER));
-                streamDTO.setDirection(KemmStreamDirectionEnum.OUTBOUND); // OUTBOUND direction
+                mqStreamDTO.setAlias(SND_FLEX_TO + upStreamQueue.substring(UP_STREAM_QUEUE_THIRD_CHARACTER));
+                mqStreamDTO.setDirection(KemmStreamDirectionEnum.OUTBOUND); // OUTBOUND direction
             } else {
-                streamDTO.setAlias(RCV_ + upStreamQueue.substring(UP_STREAM_QUEUE_THIRD_CHARACTER) + "_TO_FLEX");
-                streamDTO.setDirection(KemmStreamDirectionEnum.INBOUND); // INBOUND direction
+                mqStreamDTO.setAlias(RCV_ + upStreamQueue.substring(UP_STREAM_QUEUE_THIRD_CHARACTER) + "_TO_FLEX");
+                mqStreamDTO.setDirection(KemmStreamDirectionEnum.INBOUND); // INBOUND direction
             }
         }
 
         // Convertir en entité KemmStream avant la sauvegarde
-        return convertToEntity(streamDTO);
+        return convertToEntity(mqStreamDTO);
     }
 
-    // Méthode pour convertir le StreamDTO en entité KemmStream
-    private KemmStream convertToEntity(StreamDTO streamDTO) {
+    // Méthode pour convertir le MqStreamDTO en entité KemmStream
+    private KemmStream convertToEntity(MqStreamDTO mqStreamDTO) {
         KemmStream stream = new KemmStream();
-        stream.setAlias(streamDTO.getAlias());
-        stream.setDirection(streamDTO.getDirection());
+        stream.setAlias(mqStreamDTO.getAlias());
+        stream.setDirection(mqStreamDTO.getDirection());
         // Ajouter d'autres mappages si nécessaire
         return stream;
     }
