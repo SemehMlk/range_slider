@@ -1,11 +1,157 @@
-  private String formatConstraintViolation(ConstraintViolation<?> violation) {
-        String propertyPath = violation.getPropertyPath().toString();
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.openapitools.model.StreamDTO;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
-        // Supprimer l'indice du tableau, s'il est présent (par exemple, '[0]')
-        if (propertyPath.contains("[") && propertyPath.contains("]")) {
-            propertyPath = propertyPath.replaceAll("\\[\\d+\\]", "");  // Supprime l'indice
-        }
+import java.util.*;
 
-        // Retourne un message formaté comme : "Field 'upstreamQueue' must not be null"
-        return String.format("Field '%s' %s", propertyPath, violation.getMessage());
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.Mockito.*;
+
+class StreamsServiceTest {
+
+    @Mock
+    private StreamRepository streamRepository;
+
+    @Mock
+    private StreamMapper streamMapper;
+
+    @InjectMocks
+    private StreamsService streamsService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
     }
+
+    // 1. Test de réussite de l'importation des streams
+    @Test
+    void importStreams_Successful() {
+        // GIVEN: A valid StreamDTO list
+        StreamDTO validStream = new StreamDTO();
+        validStream.setUpStreamQueue("FLX123");
+
+        List<StreamDTO> streams = Collections.singletonList(validStream);
+
+        // Simuler la conversion du mapper
+        KemmStream mockStreamEntity = new KemmStream();
+        when(streamMapper.toKemmStream(validStream)).thenReturn(mockStreamEntity);
+
+        // WHEN: Calling the importStreams method
+        ResponseEntity<List<StreamDTO>> response = streamsService.importStreams(streams);
+
+        // THEN: Verify repository.saveAll is called
+        verify(streamRepository, times(1)).saveAll(anyList());
+
+        // THEN: Check if the response is OK
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    // 2. Test des alias déjà existants
+    @Test
+    void importStreams_AliasAlreadyExists() {
+        // GIVEN: A list of streams where an alias already exists in DB
+        StreamDTO validStream = new StreamDTO();
+        validStream.setUpStreamQueue("FLX123");
+
+        List<StreamDTO> streams = Collections.singletonList(validStream);
+        
+        Set<String> existingAliases = new HashSet<>(Collections.singletonList("FLX123"));
+        
+        when(streamRepository.findByAliasIn(anySet())).thenReturn(existingAliases);
+
+        // WHEN: Calling the importStreams method
+        InvalidRequestException exception = assertThrows(InvalidRequestException.class, 
+            () -> streamsService.importStreams(streams));
+
+        // THEN: Verify proper exception is thrown
+        assertThat(exception.getMessage()).contains("These aliases already exist");
+    }
+
+    // 3. Test avec duplications d'alias dans la requête elle-même
+    @Test
+    void importStreams_DuplicatedAliasInRequest() {
+        // GIVEN: A list of streams with duplicate alias in the same request
+        StreamDTO stream1 = new StreamDTO();
+        stream1.setUpStreamQueue("FLX123");
+
+        StreamDTO stream2 = new StreamDTO();
+        stream2.setUpStreamQueue("FLX123"); // duplicate alias
+
+        List<StreamDTO> streams = Arrays.asList(stream1, stream2);
+
+        // WHEN: Calling the importStreams method
+        InvalidRequestException exception = assertThrows(InvalidRequestException.class, 
+            () -> streamsService.importStreams(streams));
+
+        // THEN: Check if the proper error is thrown
+        assertThat(exception.getMessage()).contains("These aliases already exist");
+    }
+
+    // 4. Test avec des données invalides dans upStreamQueue
+    @Test
+    void importStreams_InvalidUpStreamQueue() {
+        // GIVEN: A stream with invalid upStreamQueue
+        StreamDTO invalidStream = new StreamDTO();
+        invalidStream.setUpStreamQueue("123"); // too short
+        
+        List<StreamDTO> streams = Collections.singletonList(invalidStream);
+
+        // WHEN: Calling the importStreams method
+        ResponseEntity<List<StreamDTO>> response = streamsService.importStreams(streams);
+
+        // THEN: Check if the proper error is thrown
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody()).contains("Invalid upStreamQueue");
+    }
+
+    // 5. Test de la génération correcte des propriétés alias et direction
+    @Test
+    void importStreams_GeneratesCorrectAliasAndDirection() {
+        // GIVEN: A valid stream with a valid upStreamQueue
+        StreamDTO validStream = new StreamDTO();
+        validStream.setUpStreamQueue("FLX123");
+        
+        List<StreamDTO> streams = Collections.singletonList(validStream);
+
+        // Simuler la conversion du mapper
+        KemmStream mockStreamEntity = new KemmStream();
+        when(streamMapper.toKemmStream(validStream)).thenReturn(mockStreamEntity);
+
+        // WHEN: Calling the importStreams method
+        streamsService.importStreams(streams);
+
+        // THEN: Verify alias and direction are generated correctly
+        assertThat(validStream.getAlias()).isEqualTo("SND_FLEX_TO_123");
+        assertThat(validStream.getDirection()).isEqualTo(DirectionEnum.OUTBOUND);
+    }
+
+    // 6. Test des exceptions levées lors de la sauvegarde en base
+    @Test
+    void importStreams_SaveAllThrowsException() {
+        // GIVEN: A valid stream
+        StreamDTO validStream = new StreamDTO();
+        validStream.setUpStreamQueue("FLX123");
+
+        List<StreamDTO> streams = Collections.singletonList(validStream);
+
+        // Simuler une exception lors de la sauvegarde
+        doThrow(new DataIntegrityViolationException("Integrity violation")).when(streamRepository).saveAll(anyList());
+
+        // WHEN: Calling the importStreams method
+        RuntimeException exception = assertThrows(RuntimeException.class, 
+            () -> streamsService.importStreams(streams));
+
+        // THEN: Verify proper exception is thrown
+        assertThat(exception.getMessage()).contains("Integrity violation");
+    }
+
+}
