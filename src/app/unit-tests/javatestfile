@@ -9,6 +9,9 @@ import * as Papa from 'papaparse';
 export class AppComponent {
 
   jsonData: any[] = [];
+  
+  // Liste des champs que vous voulez récupérer
+  desiredFields = ['name', 'age', 'city', 'country'];  // Spécifiez ici les 4 champs
 
   // Cette méthode est déclenchée lorsque l'utilisateur sélectionne un fichier
   onFileSelected(event: any): void {
@@ -31,8 +34,18 @@ export class AppComponent {
         header: true, // Convertir la première ligne en propriétés d'objet
         skipEmptyLines: true,
         complete: (result) => {
-          this.jsonData = result.data;
-          console.log(this.jsonData); // Afficher les données JSON
+          // Transformer le résultat pour ne garder que les champs désirés
+          this.jsonData = result.data.map((row: any) => {
+            const filteredRow: any = {};
+            this.desiredFields.forEach(field => {
+              if (row.hasOwnProperty(field)) {
+                filteredRow[field] = row[field];
+              }
+            });
+            return filteredRow;
+          });
+          
+          console.log(this.jsonData); // Afficher les données filtrées en JSON
         }
       });
     };
