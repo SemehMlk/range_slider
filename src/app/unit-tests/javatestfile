@@ -1,20 +1,91 @@
-  describe('importStreams', () => {
-    it('should call apiService.importStreams and handle success', () => {
-      const mockStreams = [{ name: 'John', age: '30' }];
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+import org.openapitools.model.StreamDTO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.test.web.servlet.MockMvc;
 
-      component.importStreams(mockStreams);
+import javax.validation.ConstraintViolationException;
+import java.util.Collections;
 
-      expect(apiServiceMock.importStreams).toHaveBeenCalledWith(mockStreams);
-      expect(generalDialogServiceMock.success).toHaveBeenCalledWith(['streams.dialog.body.import']);
-    });
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-    it('should handle error correctly', () => {
-      const mockStreams = [{ name: 'John', age: '30' }];
-      apiServiceMock.importStreams.mockReturnValueOnce(throwError({ error: { errors: ['Error message'] } }));
+@SpringBootTest
+@AutoConfigureMockMvc
+class GlobalExceptionHandlerIntegrationTest {
 
-      component.importStreams(mockStreams);
+    @Autowired
+    private MockMvc mockMvc;
 
-      expect(apiServiceMock.importStreams).toHaveBeenCalledWith(mockStreams);
-      expect(generalDialogServiceMock.error).toHaveBeenCalledWith(['Error message']);
-    });
-  });
+    @MockBean
+    private StreamRepository streamRepository;
+
+    @MockBean
+    private StreamMapper streamMapper;
+
+    @Test
+    void handleConstraintViolationException_ShouldReturnProblemDetail() throws Exception {
+        // GIVEN: Une exception de violation de contrainte est lancée lors de l'import des streams
+        StreamDTO validStream = new StreamDTO();
+        validStream.setUpStreamQueue("FLX123");
+
+        when(streamRepository.saveAll(anyList())).thenThrow(new ConstraintViolationException(Collections.emptySet()));
+
+        // WHEN: Nous appelons l'API d'import des streams
+        mockMvc.perform(post("/streams/import") // Remplace cette route par la route appropriée dans ton API
+                .contentType("application/json")
+                .content("[{\"upStreamQueue\": \"FLX123\"}]"))
+                // THEN: Le handler global doit intercepter l'exception et retourner un ProblemDetail
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Validation Error"))
+                .andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+                .andExpect(jsonPath("$.detail").value("Constraint violation occurred"));
+    }
+
+    @Test
+    void handleRuntimeException_ShouldReturnProblemDetail() throws Exception {
+        // GIVEN: Une exception RuntimeException est lancée lors de l'import des streams
+        StreamDTO validStream = new StreamDTO();
+        validStream.setUpStreamQueue("FLX123");
+
+        when(streamRepository.saveAll(anyList())).thenThrow(new RuntimeException("Unexpected error occurred"));
+
+        // WHEN: Nous appelons l'API d'import des streams
+        mockMvc.perform(post("/streams/import") // Remplace cette route par la route appropriée dans ton API
+                .contentType("application/json")
+                .content("[{\"upStreamQueue\": \"FLX123\"}]"))
+                // THEN: Le handler global doit intercepter l'exception et retourner un ProblemDetail
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.title").value("Unexpected Error"))
+                .andExpect(jsonPath("$.status").value(HttpStatus.INTERNAL_SERVER_ERROR.value()))
+                .andExpect(jsonPath("$.detail").value("Unexpected error occurred"));
+    }
+
+    @Test
+    void handleDataIntegrityViolationException_ShouldReturnProblemDetail() throws Exception {
+        // GIVEN: Une exception DataIntegrityViolationException est lancée lors de l'import des streams
+        StreamDTO validStream = new StreamDTO();
+        validStream.setUpStreamQueue("FLX123");
+
+        when(streamRepository.saveAll(anyList())).thenThrow(new DataIntegrityViolationException("Integrity violation"));
+
+        // WHEN: Nous appelons l'API d'import des streams
+        mockMvc.perform(post("/streams/import") // Remplace cette route par la route appropriée dans ton API
+                .contentType("application/json")
+                .content("[{\"upStreamQueue\": \"FLX123\"}]"))
+                // THEN: Le handler global doit intercepter l'exception et retourner un ProblemDetail
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.title").value("Validation Error"))
+                .andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
+                .andExpect(jsonPath("$.detail").value("Integrity violation"));
+    }
+}
