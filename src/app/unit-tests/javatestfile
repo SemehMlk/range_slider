@@ -1,19 +1,36 @@
-describe('onFileSelect', () => {
-  it('should call readCsvFile if a file is selected', () => {
-    const mockFile = new File(['test'], 'test.csv', { type: 'text/csv' });
-    const mockEvent = {
-      target: {
-        files: [mockFile],
-      },
+jest.mock('papaparse', () => ({
+  parse: jest.fn((csvData, config) => {
+    config.complete({
+      data: [
+        { name: 'John', age: '30' },
+        { name: 'Jane', age: '25' },
+      ],
+    });
+  }),
+}));
+
+describe('readCsvFile', () => {
+  it('should parse CSV and call importStreams with the result', (done) => {
+    const mockFile = new File(['name,age\nJohn,30\nJane,25'], 'test.csv', { type: 'text/csv' });
+    const mockReader = {
+      readAsText: jest.fn(),
+      result: 'name,age\nJohn,30\nJane,25',
+      onload: () => {},
     };
 
-    // Espionner la méthode readCsvFile pour vérifier son appel
-    jest.spyOn(component, 'readCsvFile');
+    jest.spyOn(window as any, 'FileReader').mockImplementation(() => mockReader);
 
-    // Appelez la méthode onFileSelect avec l'événement simulé
-    component.onFileSelect(mockEvent as any);
+    jest.spyOn(component, 'importStreams');
 
-    // Assurez-vous que readCsvFile a été appelée avec le bon fichier
-    expect(component.readCsvFile).toHaveBeenCalledWith(mockFile);
+    component.readCsvFile(mockFile);
+    mockReader.onload();
+
+    setTimeout(() => {
+      expect(component.importStreams).toHaveBeenCalledWith([
+        { name: 'John', age: '30', type: component.kemmStreamTypeEnum.MQ, managerId: component.mqManager?.id },
+        { name: 'Jane', age: '25', type: component.kemmStreamTypeEnum.MQ, managerId: component.mqManager?.id },
+      ]);
+      done();
+    }, 100);
   });
 });
