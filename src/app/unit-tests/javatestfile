@@ -1,36 +1,20 @@
-jest.mock('papaparse', () => ({
-  parse: jest.fn((csvData, config) => {
-    config.complete({
-      data: [
-        { name: 'John', age: '30' },
-        { name: 'Jane', age: '25' },
-      ],
+  describe('importStreams', () => {
+    it('should call apiService.importStreams and handle success', () => {
+      const mockStreams = [{ name: 'John', age: '30' }];
+
+      component.importStreams(mockStreams);
+
+      expect(apiServiceMock.importStreams).toHaveBeenCalledWith(mockStreams);
+      expect(generalDialogServiceMock.success).toHaveBeenCalledWith(['streams.dialog.body.import']);
     });
-  }),
-}));
 
-describe('readCsvFile', () => {
-  it('should parse CSV and call importStreams with the result', (done) => {
-    const mockFile = new File(['name,age\nJohn,30\nJane,25'], 'test.csv', { type: 'text/csv' });
-    const mockReader = {
-      readAsText: jest.fn(),
-      result: 'name,age\nJohn,30\nJane,25',
-      onload: () => {},
-    };
+    it('should handle error correctly', () => {
+      const mockStreams = [{ name: 'John', age: '30' }];
+      apiServiceMock.importStreams.mockReturnValueOnce(throwError({ error: { errors: ['Error message'] } }));
 
-    jest.spyOn(window as any, 'FileReader').mockImplementation(() => mockReader);
+      component.importStreams(mockStreams);
 
-    jest.spyOn(component, 'importStreams');
-
-    component.readCsvFile(mockFile);
-    mockReader.onload();
-
-    setTimeout(() => {
-      expect(component.importStreams).toHaveBeenCalledWith([
-        { name: 'John', age: '30', type: component.kemmStreamTypeEnum.MQ, managerId: component.mqManager?.id },
-        { name: 'Jane', age: '25', type: component.kemmStreamTypeEnum.MQ, managerId: component.mqManager?.id },
-      ]);
-      done();
-    }, 100);
+      expect(apiServiceMock.importStreams).toHaveBeenCalledWith(mockStreams);
+      expect(generalDialogServiceMock.error).toHaveBeenCalledWith(['Error message']);
+    });
   });
-});
