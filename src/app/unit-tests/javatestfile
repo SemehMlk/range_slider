@@ -4,14 +4,21 @@ import org.mockito.InjectMocks;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.core.MethodParameter;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
+import javax.validation.Path;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 class GlobalExceptionHandlerTest {
 
@@ -82,19 +89,15 @@ class GlobalExceptionHandlerTest {
     // Méthodes utilitaires pour simuler les violations de contrainte et les erreurs de validation
 
     private ConstraintViolation<?> createMockConstraintViolation(String field, String message) {
-        return new ConstraintViolation<>() {
-            @Override
-            public String getMessage() {
-                return message;
-            }
+        ConstraintViolation<?> violation = mock(ConstraintViolation.class);
+        
+        // Simuler le Path (chemin de propriété) en fonction du champ
+        Path mockPath = mock(Path.class);
+        when(mockPath.toString()).thenReturn(field); // Le Path converti en chaîne sera le nom du champ
+        when(violation.getPropertyPath()).thenReturn(mockPath);
+        when(violation.getMessage()).thenReturn(message);
 
-            @Override
-            public String getPropertyPath() {
-                return field;
-            }
-
-            // Implémentation d'autres méthodes vides ou par défaut...
-        };
+        return violation;
     }
 
     private MethodArgumentNotValidException mockMethodArgumentNotValidException(String field, String message) {
