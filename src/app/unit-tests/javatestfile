@@ -1,91 +1,107 @@
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.openapitools.model.StreamDTO;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.mockito.InjectMocks;
+import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
-import org.springframework.test.web.servlet.MockMvc;
 
+import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
-import static org.mockito.ArgumentMatchers.anyList;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-class GlobalExceptionHandlerIntegrationTest {
+class GlobalExceptionHandlerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+    @InjectMocks
+    private GlobalExceptionHandler globalExceptionHandler;
 
-    @MockBean
-    private StreamRepository streamRepository;
-
-    @MockBean
-    private StreamMapper streamMapper;
-
-    @Test
-    void handleConstraintViolationException_ShouldReturnProblemDetail() throws Exception {
-        // GIVEN: Une exception de violation de contrainte est lancée lors de l'import des streams
-        StreamDTO validStream = new StreamDTO();
-        validStream.setUpStreamQueue("FLX123");
-
-        when(streamRepository.saveAll(anyList())).thenThrow(new ConstraintViolationException(Collections.emptySet()));
-
-        // WHEN: Nous appelons l'API d'import des streams
-        mockMvc.perform(post("/streams/import") // Remplace cette route par la route appropriée dans ton API
-                .contentType("application/json")
-                .content("[{\"upStreamQueue\": \"FLX123\"}]"))
-                // THEN: Le handler global doit intercepter l'exception et retourner un ProblemDetail
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title").value("Validation Error"))
-                .andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-                .andExpect(jsonPath("$.detail").value("Constraint violation occurred"));
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
     }
 
+    // 1. Test pour RuntimeException (générer ProblemDetail)
     @Test
-    void handleRuntimeException_ShouldReturnProblemDetail() throws Exception {
-        // GIVEN: Une exception RuntimeException est lancée lors de l'import des streams
-        StreamDTO validStream = new StreamDTO();
-        validStream.setUpStreamQueue("FLX123");
+    void handleRuntimeException_ShouldReturnProblemDetail() {
+        // GIVEN: Une RuntimeException est lancée
+        RuntimeException exception = new RuntimeException("Unexpected error occurred");
 
-        when(streamRepository.saveAll(anyList())).thenThrow(new RuntimeException("Unexpected error occurred"));
+        // WHEN: La méthode handleRuntimeException est appelée
+        ProblemDetail problemDetail = globalExceptionHandler.handleRuntimeException(exception);
 
-        // WHEN: Nous appelons l'API d'import des streams
-        mockMvc.perform(post("/streams/import") // Remplace cette route par la route appropriée dans ton API
-                .contentType("application/json")
-                .content("[{\"upStreamQueue\": \"FLX123\"}]"))
-                // THEN: Le handler global doit intercepter l'exception et retourner un ProblemDetail
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.title").value("Unexpected Error"))
-                .andExpect(jsonPath("$.status").value(HttpStatus.INTERNAL_SERVER_ERROR.value()))
-                .andExpect(jsonPath("$.detail").value("Unexpected error occurred"));
+        // THEN: Le ProblemDetail doit contenir les bons détails
+        assertThat(problemDetail).isNotNull();
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
+        assertThat(problemDetail.getTitle()).isEqualTo("Unexpected Error");
+        assertThat(problemDetail.getDetail()).isEqualTo("Unexpected error occurred");
     }
 
+    // 2. Test pour ConstraintViolationException (générer ProblemDetail)
     @Test
-    void handleDataIntegrityViolationException_ShouldReturnProblemDetail() throws Exception {
-        // GIVEN: Une exception DataIntegrityViolationException est lancée lors de l'import des streams
-        StreamDTO validStream = new StreamDTO();
-        validStream.setUpStreamQueue("FLX123");
+    void handleConstraintViolationException_ShouldReturnProblemDetail() {
+        // GIVEN: Une ConstraintViolationException avec une violation de contrainte
+        ConstraintViolation<?> violation = createMockConstraintViolation("name", "must not be null");
+        Set<ConstraintViolation<?>> violations = new HashSet<>(Collections.singletonList(violation));
+        ConstraintViolationException exception = new ConstraintViolationException(violations);
 
-        when(streamRepository.saveAll(anyList())).thenThrow(new DataIntegrityViolationException("Integrity violation"));
+        // WHEN: La méthode handleConstraintViolationException est appelée
+        ProblemDetail problemDetail = globalExceptionHandler.handleConstraintViolationException(exception);
 
-        // WHEN: Nous appelons l'API d'import des streams
-        mockMvc.perform(post("/streams/import") // Remplace cette route par la route appropriée dans ton API
-                .contentType("application/json")
-                .content("[{\"upStreamQueue\": \"FLX123\"}]"))
-                // THEN: Le handler global doit intercepter l'exception et retourner un ProblemDetail
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.title").value("Validation Error"))
-                .andExpect(jsonPath("$.status").value(HttpStatus.BAD_REQUEST.value()))
-                .andExpect(jsonPath("$.detail").value("Integrity violation"));
+        // THEN: Le ProblemDetail doit contenir les bons détails
+        assertThat(problemDetail).isNotNull();
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(problemDetail.getTitle()).isEqualTo("Validation Error");
+        assertThat(problemDetail.getDetail()).isEqualTo("Constraint violation occurred");
+
+        // Vérifier que le champ d'erreurs contient la bonne information
+        assertThat(problemDetail.getProperties().get("errors")).asList().contains("Field 'name' must not be null");
+    }
+
+    // 3. Test pour MethodArgumentNotValidException (générer ProblemDetail)
+    @Test
+    void handleMethodArgumentNotValidException_ShouldReturnProblemDetail() {
+        // GIVEN: Une MethodArgumentNotValidException simulée
+        MethodArgumentNotValidException exception = mockMethodArgumentNotValidException("email", "must be a valid email");
+
+        // WHEN: La méthode handleMethodArgumentNotValidException est appelée
+        ProblemDetail problemDetail = globalExceptionHandler.handleMethodArgumentNotValidException(exception);
+
+        // THEN: Le ProblemDetail doit contenir les bons détails
+        assertThat(problemDetail).isNotNull();
+        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(problemDetail.getTitle()).isEqualTo("Validation Error");
+        assertThat(problemDetail.getDetail()).isEqualTo("Validation failed");
+
+        // Vérifier que le champ d'erreurs contient la bonne information
+        assertThat(problemDetail.getProperties().get("errors")).asList().contains("Field 'email' must be a valid email");
+    }
+
+    // Méthodes utilitaires pour simuler les violations de contrainte et les erreurs de validation
+
+    private ConstraintViolation<?> createMockConstraintViolation(String field, String message) {
+        return new ConstraintViolation<>() {
+            @Override
+            public String getMessage() {
+                return message;
+            }
+
+            @Override
+            public String getPropertyPath() {
+                return field;
+            }
+
+            // Implémentation d'autres méthodes vides ou par défaut...
+        };
+    }
+
+    private MethodArgumentNotValidException mockMethodArgumentNotValidException(String field, String message) {
+        // Simuler un objet MethodArgumentNotValidException
+        FieldError fieldError = new FieldError("objectName", field, message);
+        BindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "objectName");
+        bindingResult.addError(fieldError);
+        return new MethodArgumentNotValidException(new MethodParameter(this.getClass().getConstructors()[0], 0), bindingResult);
     }
 }
