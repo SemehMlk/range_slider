@@ -1,23 +1,45 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { StreamsComponent } from './streams.component';
+import { ManagerService } from '../services/manager.service';
+import { KemmStreamService } from '../services/kemm-stream.service';
+import { GeneralDialogService } from '../services/general-dialog.service';
+import { StreamsService } from '../services/streams.service';
 import { of, throwError } from 'rxjs';
-import { ApiService } from '../api/api.service'; // Votre service API
-import * as Papa from 'papaparse';
+import * as Papa from 'papaparse'; // Utilisé pour simuler Papa.parse
 
 describe('StreamsComponent', () => {
   let component: StreamsComponent;
   let fixture: ComponentFixture<StreamsComponent>;
+  let managerServiceMock: any;
+  let kemmStreamServiceMock: any;
+  let generalDialogServiceMock: any;
   let apiServiceMock: any;
 
   beforeEach(async () => {
+    managerServiceMock = {
+      getAllManagers: jest.fn().mockReturnValue(of([{ id: '1', name: 'Manager1' }])),
+    };
+
+    kemmStreamServiceMock = {
+      emit: jest.fn(),
+    };
+
+    generalDialogServiceMock = {
+      success: jest.fn(),
+      error: jest.fn(),
+    };
+
     apiServiceMock = {
-      importStreams: jest.fn(),
+      importStreams: jest.fn().mockReturnValue(of({})),
     };
 
     await TestBed.configureTestingModule({
       declarations: [StreamsComponent],
       providers: [
-        { provide: ApiService, useValue: apiServiceMock },
+        { provide: ManagerService, useValue: managerServiceMock },
+        { provide: KemmStreamService, useValue: kemmStreamServiceMock },
+        { provide: GeneralDialogService, useValue: generalDialogServiceMock },
+        { provide: StreamsService, useValue: apiServiceMock },
       ],
     }).compileComponents();
   });
@@ -28,36 +50,36 @@ describe('StreamsComponent', () => {
     fixture.detectChanges();
   });
 
+  describe('ngOnInit', () => {
+    it('should call getAllManagers and set mqManager', () => {
+      expect(managerServiceMock.getAllManagers).toHaveBeenCalled();
+      expect(component.mqManager).toEqual({ id: '1', name: 'Manager1' });
+    });
+  });
+
   describe('onFileSelect', () => {
     it('should call readCsvFile if a file is selected', () => {
       const mockEvent = {
         target: {
-          files: [new File(['test'], 'test.csv')],
+          files: [new File(['test'], 'test.csv', { type: 'text/csv' })],
         },
       };
 
       jest.spyOn(component, 'readCsvFile');
       component.onFileSelect(mockEvent as any);
-
       expect(component.readCsvFile).toHaveBeenCalledWith(mockEvent.target.files[0]);
     });
 
     it('should not call readCsvFile if no file is selected', () => {
-      const mockEvent = {
-        target: {
-          files: [],
-        },
-      };
-
+      const mockEvent = { target: { files: [] } };
       jest.spyOn(component, 'readCsvFile');
       component.onFileSelect(mockEvent as any);
-
       expect(component.readCsvFile).not.toHaveBeenCalled();
     });
   });
 
   describe('readCsvFile', () => {
-    it('should read the CSV file and process the data correctly', (done) => {
+    it('should parse CSV and call importStreams with the result', (done) => {
       const mockFile = new File(['name,age\nJohn,30\nJane,25'], 'test.csv', { type: 'text/csv' });
       const mockReader = {
         readAsText: jest.fn(),
@@ -74,13 +96,12 @@ describe('StreamsComponent', () => {
       jest.spyOn(component, 'importStreams');
 
       component.readCsvFile(mockFile);
-
       mockReader.onload();
 
       setTimeout(() => {
         expect(component.importStreams).toHaveBeenCalledWith([
-          { name: 'John', age: '30', type: component.kemmStreamTypeEnum.MQ, managerId: component.mgManager?.id },
-          { name: 'Jane', age: '25', type: component.kemmStreamTypeEnum.MQ, managerId: component.mgManager?.id },
+          { name: 'John', age: '30', type: component.kemmStreamTypeEnum.MQ, managerId: component.mqManager?.id },
+          { name: 'Jane', age: '25', type: component.kemmStreamTypeEnum.MQ, managerId: component.mqManager?.id },
         ]);
         done();
       }, 100);
@@ -90,30 +111,32 @@ describe('StreamsComponent', () => {
   describe('importStreams', () => {
     it('should call apiService.importStreams and handle success', () => {
       const mockStreams = [{ name: 'John', age: '30' }];
-      const successResponse = { message: 'success' };
-
-      apiServiceMock.importStreams.mockReturnValue(of(successResponse));
-
-      jest.spyOn(component.generalDialogService, 'success');
 
       component.importStreams(mockStreams);
 
       expect(apiServiceMock.importStreams).toHaveBeenCalledWith(mockStreams);
-      expect(component.generalDialogService.success).toHaveBeenCalledWith(['streams.dialog.body.import']);
+      expect(generalDialogServiceMock.success).toHaveBeenCalledWith(['streams.dialog.body.import']);
     });
 
     it('should handle error correctly', () => {
       const mockStreams = [{ name: 'John', age: '30' }];
-      const errorResponse = { error: { errors: ['Error message'] } };
-
-      apiServiceMock.importStreams.mockReturnValue(throwError(errorResponse));
-
-      jest.spyOn(component.generalDialogService, 'error');
+      apiServiceMock.importStreams.mockReturnValueOnce(throwError({ error: { errors: ['Error message'] } }));
 
       component.importStreams(mockStreams);
 
       expect(apiServiceMock.importStreams).toHaveBeenCalledWith(mockStreams);
-      expect(component.generalDialogService.error).toHaveBeenCalledWith(errorResponse.error.errors);
+      expect(generalDialogServiceMock.error).toHaveBeenCalledWith(['Error message']);
+    });
+  });
+
+  describe('ngOnDestroy', () => {
+    it('should unsubscribe from all subscriptions', () => {
+      const mockSubscription = { unsubscribe: jest.fn() };
+      component['subscriptions'] = [mockSubscription as any];
+
+      component.ngOnDestroy();
+
+      expect(mockSubscription.unsubscribe).toHaveBeenCalled();
     });
   });
 });
