@@ -1,55 +1,119 @@
-import { Component } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { StreamsComponent } from './streams.component';
+import { of, throwError } from 'rxjs';
+import { ApiService } from '../api/api.service'; // Votre service API
 import * as Papa from 'papaparse';
 
-@Component({
-  selector: 'app-root',
-  templateUrl: './app.component.html',
-  styleUrls: ['./app.component.css']
-})
-export class AppComponent {
+describe('StreamsComponent', () => {
+  let component: StreamsComponent;
+  let fixture: ComponentFixture<StreamsComponent>;
+  let apiServiceMock: any;
 
-  jsonData: any[] = [];
-  
-  // Liste des champs que vous voulez récupérer
-  desiredFields = ['name', 'age', 'city', 'country'];  // Spécifiez ici les 4 champs
-
-  // Cette méthode est déclenchée lorsque l'utilisateur sélectionne un fichier
-  onFileSelected(event: any): void {
-    const file: File = event.target.files[0];
-
-    if (file) {
-      // Appeler la fonction pour traiter le fichier CSV
-      this.readCsvFile(file);
-    }
-  }
-
-  // Lecture et conversion du CSV en JSON
-  readCsvFile(file: File): void {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const csvData = reader.result;
-
-      // Utilisation de PapaParse pour parser le CSV
-      Papa.parse(csvData as string, {
-        header: true, // Convertir la première ligne en propriétés d'objet
-        skipEmptyLines: true,
-        complete: (result) => {
-          // Transformer le résultat pour ne garder que les champs désirés
-          this.jsonData = result.data.map((row: any) => {
-            const filteredRow: any = {};
-            this.desiredFields.forEach(field => {
-              if (row.hasOwnProperty(field)) {
-                filteredRow[field] = row[field];
-              }
-            });
-            return filteredRow;
-          });
-          
-          console.log(this.jsonData); // Afficher les données filtrées en JSON
-        }
-      });
+  beforeEach(async () => {
+    apiServiceMock = {
+      importStreams: jest.fn(),
     };
 
-    reader.readAsText(file);
-  }
-}
+    await TestBed.configureTestingModule({
+      declarations: [StreamsComponent],
+      providers: [
+        { provide: ApiService, useValue: apiServiceMock },
+      ],
+    }).compileComponents();
+  });
+
+  beforeEach(() => {
+    fixture = TestBed.createComponent(StreamsComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  describe('onFileSelect', () => {
+    it('should call readCsvFile if a file is selected', () => {
+      const mockEvent = {
+        target: {
+          files: [new File(['test'], 'test.csv')],
+        },
+      };
+
+      jest.spyOn(component, 'readCsvFile');
+      component.onFileSelect(mockEvent as any);
+
+      expect(component.readCsvFile).toHaveBeenCalledWith(mockEvent.target.files[0]);
+    });
+
+    it('should not call readCsvFile if no file is selected', () => {
+      const mockEvent = {
+        target: {
+          files: [],
+        },
+      };
+
+      jest.spyOn(component, 'readCsvFile');
+      component.onFileSelect(mockEvent as any);
+
+      expect(component.readCsvFile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('readCsvFile', () => {
+    it('should read the CSV file and process the data correctly', (done) => {
+      const mockFile = new File(['name,age\nJohn,30\nJane,25'], 'test.csv', { type: 'text/csv' });
+      const mockReader = {
+        readAsText: jest.fn(),
+        result: 'name,age\nJohn,30\nJane,25',
+        onload: () => {},
+      };
+
+      jest.spyOn(window as any, 'FileReader').mockImplementation(() => mockReader);
+
+      jest.spyOn(Papa, 'parse').mockImplementation((csvData, config) => {
+        config.complete({ data: [{ name: 'John', age: '30' }, { name: 'Jane', age: '25' }] });
+      });
+
+      jest.spyOn(component, 'importStreams');
+
+      component.readCsvFile(mockFile);
+
+      mockReader.onload();
+
+      setTimeout(() => {
+        expect(component.importStreams).toHaveBeenCalledWith([
+          { name: 'John', age: '30', type: component.kemmStreamTypeEnum.MQ, managerId: component.mgManager?.id },
+          { name: 'Jane', age: '25', type: component.kemmStreamTypeEnum.MQ, managerId: component.mgManager?.id },
+        ]);
+        done();
+      }, 100);
+    });
+  });
+
+  describe('importStreams', () => {
+    it('should call apiService.importStreams and handle success', () => {
+      const mockStreams = [{ name: 'John', age: '30' }];
+      const successResponse = { message: 'success' };
+
+      apiServiceMock.importStreams.mockReturnValue(of(successResponse));
+
+      jest.spyOn(component.generalDialogService, 'success');
+
+      component.importStreams(mockStreams);
+
+      expect(apiServiceMock.importStreams).toHaveBeenCalledWith(mockStreams);
+      expect(component.generalDialogService.success).toHaveBeenCalledWith(['streams.dialog.body.import']);
+    });
+
+    it('should handle error correctly', () => {
+      const mockStreams = [{ name: 'John', age: '30' }];
+      const errorResponse = { error: { errors: ['Error message'] } };
+
+      apiServiceMock.importStreams.mockReturnValue(throwError(errorResponse));
+
+      jest.spyOn(component.generalDialogService, 'error');
+
+      component.importStreams(mockStreams);
+
+      expect(apiServiceMock.importStreams).toHaveBeenCalledWith(mockStreams);
+      expect(component.generalDialogService.error).toHaveBeenCalledWith(errorResponse.error.errors);
+    });
+  });
+});
