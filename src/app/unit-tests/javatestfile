@@ -13,25 +13,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 @SpringBootTest  // Charger le contexte Spring complet
-@TestPropertySource("classpath:application-test.properties")  // Charger les propriétés de application-test.properties
+@TestPropertySource("classpath:application-test.properties")  // Charger les propriétés depuis application-test.properties
 class StreamsServiceTest {
 
     @MockBean
-    private StreamRepository streamRepository;  // Utiliser @MockBean pour mocker StreamRepository
+    private StreamRepository streamRepository;  // Mock StreamRepository
 
     @MockBean
-    private StreamMapper streamMapper;  // Utiliser @MockBean pour mocker StreamMapper
+    private StreamMapper streamMapper;  // Mock StreamMapper
 
     @Autowired
-    private StreamsService streamsService;  // Utiliser @Autowired pour injecter automatiquement StreamsService avec les mocks
+    private StreamsService streamsService;  // Injecter StreamsService
 
     @Autowired
-    private StreamProperties streamProperties;  // Injecter automatiquement StreamProperties depuis application-test.properties
+    private StreamProperties streamProperties;  // Injecter StreamProperties depuis application-test.properties
 
     @Test
     void testGetAllStreams() {
         // Vérifier que les propriétés sont bien injectées depuis application-test.properties
         assertThat(streamProperties.getSndFlexTo()).isEqualTo("SND_FLEX_TO_");
+        assertThat(streamProperties.getToFlex()).isEqualTo("_TO_FLEX");
+        assertThat(streamProperties.getRcv()).isEqualTo("RCV_");
 
         // Mock d'un stream à partir du repository
         KemmStream genericStream = mock(KemmStream.class);
