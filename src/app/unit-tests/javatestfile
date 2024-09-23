@@ -1,110 +1,105 @@
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
-import org.springframework.validation.BeanPropertyBindingResult;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.core.MethodParameter;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.ConstraintViolationException;
-import javax.validation.Path;
-import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
+@DataJpaTest
+public class KemmStreamsRepositoryTest {
 
-class GlobalExceptionHandlerTest {
-
-    @InjectMocks
-    private GlobalExceptionHandler globalExceptionHandler;
+    @Autowired
+    private StreamRepository streamRepository;
 
     @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+    public void setup() {
+        // Manually insert entities into the database before each test
+        KemmStream stream1 = new KemmStream();
+        stream1.setAlias("QA.KEM_FROM_FLX_MSG_GMI");
+        // Set other fields for stream1
+
+        KemmStream stream2 = new KemmStream();
+        stream2.setAlias("QA.KEM_FROM_GMI_MSG");
+        // Set other fields for stream2
+
+        streamRepository.save(stream1);
+        streamRepository.save(stream2);
     }
 
-    // 1. Test pour RuntimeException (générer ProblemDetail)
     @Test
-    void handleRuntimeException_ShouldReturnProblemDetail() {
-        // GIVEN: Une RuntimeException est lancée
-        RuntimeException exception = new RuntimeException("Unexpected error occurred");
+    public void testGetStreamsByAliases() {
+        Set<String> aliases = Set.of("QA.KEM_FROM_FLX_MSG_GMI", "QA.KEM_FROM_GMI_MSG");
 
-        // WHEN: La méthode handleRuntimeException est appelée
-        ProblemDetail problemDetail = globalExceptionHandler.handleRuntimeException(exception);
+        List<KemmStream> findedStreams = streamRepository.findByAliasIn(aliases);
 
-        // THEN: Le ProblemDetail doit contenir les bons détails
-        assertThat(problemDetail).isNotNull();
-        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR.value());
-        assertThat(problemDetail.getTitle()).isEqualTo("Unexpected Error");
-        assertThat(problemDetail.getDetail()).isEqualTo("Unexpected error occurred");
+        Assertions.assertThat(findedStreams).hasSize(2);
     }
 
-    // 2. Test pour ConstraintViolationException (générer ProblemDetail)
     @Test
-    void handleConstraintViolationException_ShouldReturnProblemDetail() {
-        // GIVEN: Une ConstraintViolationException avec une violation de contrainte
-        ConstraintViolation<?> violation = createMockConstraintViolation("name", "must not be null");
-        Set<ConstraintViolation<?>> violations = new HashSet<>(Collections.singletonList(violation));
-        ConstraintViolationException exception = new ConstraintViolationException(violations);
+    public void testGetStreamsByEmptyAliases() {
+        Set<String> aliases = Set.of(); // Empty Set
+        List<KemmStream> findedStreams = streamRepository.findByAliasIn(aliases);
 
-        // WHEN: La méthode handleConstraintViolationException est appelée
-        ProblemDetail problemDetail = globalExceptionHandler.handleConstraintViolationException(exception);
-
-        // THEN: Le ProblemDetail doit contenir les bons détails
-        assertThat(problemDetail).isNotNull();
-        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
-        assertThat(problemDetail.getTitle()).isEqualTo("Validation Error");
-        assertThat(problemDetail.getDetail()).isEqualTo("Constraint violation occurred");
-
-        // Vérifier que le champ d'erreurs contient la bonne information
-        assertThat(problemDetail.getProperties().get("errors")).asList().contains("Field 'name' must not be null");
+        // Expecting no results since no aliases are provided
+        Assertions.assertThat(findedStreams).isEmpty();
     }
 
-    // 3. Test pour MethodArgumentNotValidException (générer ProblemDetail)
     @Test
-    void handleMethodArgumentNotValidException_ShouldReturnProblemDetail() {
-        // GIVEN: Une MethodArgumentNotValidException simulée
-        MethodArgumentNotValidException exception = mockMethodArgumentNotValidException("email", "must be a valid email");
+    public void testGetStreamsByNonExistingAliases() {
+        Set<String> aliases = Set.of("NON_EXISTENT_ALIAS_1", "NON_EXISTENT_ALIAS_2");
+        List<KemmStream> findedStreams = streamRepository.findByAliasIn(aliases);
 
-        // WHEN: La méthode handleMethodArgumentNotValidException est appelée
-        ProblemDetail problemDetail = globalExceptionHandler.handleMethodArgumentNotValidException(exception);
-
-        // THEN: Le ProblemDetail doit contenir les bons détails
-        assertThat(problemDetail).isNotNull();
-        assertThat(problemDetail.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
-        assertThat(problemDetail.getTitle()).isEqualTo("Validation Error");
-        assertThat(problemDetail.getDetail()).isEqualTo("Validation failed");
-
-        // Vérifier que le champ d'erreurs contient la bonne information
-        assertThat(problemDetail.getProperties().get("errors")).asList().contains("Field 'email' must be a valid email");
+        // Expecting no results since aliases do not exist
+        Assertions.assertThat(findedStreams).isEmpty();
     }
 
-    // Méthodes utilitaires pour simuler les violations de contrainte et les erreurs de validation
+    @Test
+    public void testGetStreamsByPartialAliases() {
+        Set<String> aliases = Set.of("QA.KEM_FROM_FLX_MSG_GMI", "NON_EXISTENT_ALIAS_2");
+        List<KemmStream> findedStreams = streamRepository.findByAliasIn(aliases);
 
-    private ConstraintViolation<?> createMockConstraintViolation(String field, String message) {
-        ConstraintViolation<?> violation = mock(ConstraintViolation.class);
-        
-        // Simuler le Path (chemin de propriété) en fonction du champ
-        Path mockPath = mock(Path.class);
-        when(mockPath.toString()).thenReturn(field); // Le Path converti en chaîne sera le nom du champ
-        when(violation.getPropertyPath()).thenReturn(mockPath);
-        when(violation.getMessage()).thenReturn(message);
-
-        return violation;
+        // Expecting one result that matches "QA.KEM_FROM_FLX_MSG_GMI"
+        Assertions.assertThat(findedStreams).hasSize(1);
+        Assertions.assertThat(findedStreams.get(0).getAlias()).isEqualTo("QA.KEM_FROM_FLX_MSG_GMI");
     }
 
-    private MethodArgumentNotValidException mockMethodArgumentNotValidException(String field, String message) {
-        // Simuler un objet MethodArgumentNotValidException
-        FieldError fieldError = new FieldError("objectName", field, message);
-        BindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "objectName");
-        bindingResult.addError(fieldError);
-        return new MethodArgumentNotValidException(new MethodParameter(this.getClass().getConstructors()[0], 0), bindingResult);
+    @Test
+    public void testGetStreamsByNullAliases() {
+        List<KemmStream> findedStreams = streamRepository.findByAliasIn(null);
+
+        // Depending on the expected behavior, adjust the assertion
+        // If null is handled by returning an empty list
+        Assertions.assertThat(findedStreams).isEmpty();
+
+        // Or, if you expect an exception, use this instead
+        // Assertions.assertThrows(IllegalArgumentException.class, () -> {
+        //     streamRepository.findByAliasIn(null);
+        // });
+    }
+
+    @Test
+    public void testGetStreamsByLargeNumberOfAliases() {
+        Set<String> aliases = new HashSet<>();
+        for (int i = 0; i < 1000; i++) {
+            aliases.add("QA.KEM_ALIAS_" + i);
+        }
+
+        List<KemmStream> findedStreams = streamRepository.findByAliasIn(aliases);
+
+        // Adjust the expectation based on how many you expect to find
+        Assertions.assertThat(findedStreams).isNotEmpty();
+    }
+
+    @Test
+    public void testGetStreamsByCaseInsensitiveAliases() {
+        Set<String> aliases = Set.of("qa.kem_from_flx_msg_gmi", "qa.kem_from_gmi_msg"); // Lowercase aliases
+        List<KemmStream> findedStreams = streamRepository.findByAliasIn(aliases);
+
+        // Expecting matches even with different case
+        Assertions.assertThat(findedStreams).hasSize(2);
     }
 }
