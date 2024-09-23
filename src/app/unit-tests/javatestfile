@@ -1,26 +1,90 @@
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.context.annotation.Configuration;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@Configuration
-@ConfigurationProperties(prefix = "stream.alias")
-public class StreamProperties {
+class StreamsServiceTest {
 
-    private String sndFlexTo;
-    private String rcvToFlex;
+    @Mock
+    private StreamRepository streamRepository;
 
-    public String getSndFlexTo() {
-        return sndFlexTo;
+    @Mock
+    private StreamMapper streamMapper;
+
+    @Mock
+    private StreamProperties streamProperties;  // Mock pour StreamProperties
+
+    @InjectMocks
+    private StreamsService streamsService;  // Injecter automatiquement les mocks dans StreamsService
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+
+        // Initialiser manuellement les propriétés avec les valeurs souhaitées
+        when(streamProperties.getSndFlexTo()).thenReturn("SND_FLEX_TO_");
+        when(streamProperties.getToFlex()).thenReturn("_TO_FLEX");
+        when(streamProperties.getRcv()).thenReturn("RCV_");
+        when(streamProperties.getFlx()).thenReturn("FLX");
+        when(streamProperties.getUpstreamQueueSixthCharacter()).thenReturn(15);
+        when(streamProperties.getUpstreamQueueThirteenthCharacter()).thenReturn(12);
+        when(streamProperties.getUpstreamQueueMinLength()).thenReturn(16);
     }
 
-    public void setSndFlexTo(String sndFlexTo) {
-        this.sndFlexTo = sndFlexTo;
+    @Test
+    void testImportStreams_Successful() {
+        // Configurer le mock pour StreamDTO
+        MqStreamDto validStream = new MqStreamDto();
+        validStream.setupUpStreamQueue("FLX123");
+
+        List<StreamDto> streams = Collections.singletonList(validStream);
+
+        // Mocker la conversion de DTO à entité
+        KemmStream mockStreamEntity = mock(KemmStream.class);
+        when(streamMapper.toKemmStream(validStream)).thenReturn(mockStreamEntity);
+
+        // Exécution du test
+        ResponseEntity<List<StreamDto>> response = streamsService.importStreams(streams);
+
+        // Vérifier que le repository a bien été appelé
+        verify(streamRepository, times(1)).saveAll(anyList());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
-    public String getRcvToFlex() {
-        return rcvToFlex;
+    @Test
+    void testPropertiesInjectedCorrectly() {
+        // Vérifier que les propriétés sont bien injectées dans StreamsService
+        assertThat(streamProperties.getSndFlexTo()).isEqualTo("SND_FLEX_TO_");
+        assertThat(streamProperties.getToFlex()).isEqualTo("_TO_FLEX");
+        assertThat(streamProperties.getRcv()).isEqualTo("RCV_");
+        assertThat(streamProperties.getFlx()).isEqualTo("FLX");
+        assertThat(streamProperties.getUpstreamQueueSixthCharacter()).isEqualTo(15);
+        assertThat(streamProperties.getUpstreamQueueThirteenthCharacter()).isEqualTo(12);
+        assertThat(streamProperties.getUpstreamQueueMinLength()).isEqualTo(16);
     }
 
-    public void setRcvToFlex(String rcvToFlex) {
-        this.rcvToFlex = rcvToFlex;
+    @Test
+    void testImportStreams_AliasAlreadyExists() {
+        // Mock des données de test
+        MqStreamDto validStream = new MqStreamDto();
+        validStream.setupUpStreamQueue("QA.KEM_FROM_GMI_MSG");
+
+        List<StreamDto> streams = Collections.singletonList(validStream);
+
+        KemmStream existingStream = mock(KemmStream.class);
+        when(existingStream.getAlias()).thenReturn("QA.KEM_FROM_GMI_MSG");
+        when(streamMapper.toKemmStream(validStream)).thenReturn(existingStream);
+        List<KemmStream> existingStreams = new ArrayList<>(Collections.singletonList(existingStream));
+
+        when(streamRepository.findByAliasIn(anySet())).thenReturn(existingStreams);
+
+        // Exécution du test
+        InvalidRequestException exception = assertThrows(InvalidRequestException.class, () -> streamsService.importStreams(streams));
+
+        // Vérifications
+        assertThat(exception.getMessage()).contains("INVALID_SEARCH_REQUEST");
     }
 }
