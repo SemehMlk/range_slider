@@ -87,3 +87,83 @@ class StreamsServiceTest {
         assertThat(exception.getMessage()).contains("INVALID_SEARCH_REQUEST");
     }
 }
+
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+
+import java.util.Collections;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
+
+@SpringBootTest  // Charger le contexte Spring complet
+@TestPropertySource("classpath:application-test.properties")  // Charger les propriétés de application-test.properties
+class StreamsServiceTest {
+
+    @MockBean
+    private StreamRepository streamRepository;
+
+    @MockBean
+    private StreamMapper streamMapper;
+
+    @Autowired
+    private StreamsService streamsService;  // Injecter automatiquement le service avec StreamProperties
+
+    @Autowired
+    private StreamProperties streamProperties;  // Injecter automatiquement StreamProperties
+
+    @TestConfiguration
+    @EnableConfigurationProperties(StreamProperties.class)  // Activer StreamProperties dans le contexte de test
+    static class TestConfig {
+        @Bean
+        public StreamProperties streamProperties() {
+            return new StreamProperties();
+        }
+    }
+
+    @Test
+    void testImportStreams_Successful() {
+        // Vérifier que StreamProperties est bien injecté depuis application-test.properties
+        assertThat(streamProperties.getSndFlexTo()).isEqualTo("SND_FLEX_TO_");
+
+        // Configurer le mock pour StreamDTO
+        MqStreamDto validStream = new MqStreamDto();
+        validStream.setupUpStreamQueue("FLX123");
+
+        List<StreamDto> streams = Collections.singletonList(validStream);
+
+        // Mocker la conversion de DTO à entité
+        KemmStream mockStreamEntity = mock(KemmStream.class);
+        when(streamMapper.toKemmStream(validStream)).thenReturn(mockStreamEntity);
+
+        // Exécution du test
+        ResponseEntity<List<StreamDto>> response = streamsService.importStreams(streams);
+
+        // Vérifier que le repository a bien été appelé
+        verify(streamRepository, times(1)).saveAll(anyList());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void testPropertiesInjectedCorrectly() {
+        // Vérifier que les propriétés sont bien injectées dans StreamsService
+        assertThat(streamProperties.getSndFlexTo()).isEqualTo("SND_FLEX_TO_");
+        assertThat(streamProperties.getToFlex()).isEqualTo("_TO_FLEX");
+        assertThat(streamProperties.getRcv()).isEqualTo("RCV_");
+        assertThat(streamProperties.getFlx()).isEqualTo("FLX");
+        assertThat(streamProperties.getUpstreamQueueSixthCharacter()).isEqualTo(15);
+        assertThat(streamProperties.getUpstreamQueueThirteenthCharacter()).isEqualTo(12);
+        assertThat(streamProperties.getUpstreamQueueMinLength()).isEqualTo(16);
+    }
+}
+
