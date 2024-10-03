@@ -1,38 +1,39 @@
 @Test
-public void testFindAvailableStreams() {
-    // Arrange: Insert a stream with deprecated as false (or null)
-    KemmMqStream activeStream = KemmMqStream.builder()
-            .upStreamQueue("active_queue")
-            .downStreamQueue("down_stream_queue")
-            .alias("ACTIVE_ALIAS")
-            .application("application")
+public void testFindByIdIn() {
+    // Arrange: Create and save multiple streams
+    KemmMqStream stream1 = KemmMqStream.builder()
+            .upStreamQueue("queue1")
+            .downStreamQueue("down_stream_queue1")
+            .alias("ALIAS1")
+            .application("application1")
             .direction(KemmStreamDirection.INBOUND)
             .state(KemmStreamState.OK)
             .status(KemmStreamStatus.INACTIVE)
             .type(KemmStreamType.MQ)
-            .deprecated(false) // or set this to null to test that case
+            .deprecated(false) // or set this to null
             .build();
-    streamRepository.save(activeStream);
+    streamRepository.save(stream1);
 
-    // Insert a deprecated stream
-    KemmMqStream deprecatedStream = KemmMqStream.builder()
-            .upStreamQueue("deprecated_queue")
-            .downStreamQueue("down_stream_queue")
-            .alias("DEPRECATED_ALIAS")
-            .application("application")
+    KemmMqStream stream2 = KemmMqStream.builder()
+            .upStreamQueue("queue2")
+            .downStreamQueue("down_stream_queue2")
+            .alias("ALIAS2")
+            .application("application2")
             .direction(KemmStreamDirection.OUTBOUND)
             .state(KemmStreamState.OK)
-            .status(KemmStreamStatus.INACTIVE)
+            .status(KemmStreamStatus.ACTIVE)
             .type(KemmStreamType.MQ)
-            .deprecated(true) // Deprecated set to true
+            .deprecated(false) // or set this to null
             .build();
-    streamRepository.save(deprecatedStream);
+    streamRepository.save(stream2);
 
-    // Act: Find all available streams
-    List<KemmStream> availableStreams = streamRepository.findAvailableStreams();
+    // Act: Find streams by their IDs
+    List<Long> ids = List.of(stream1.getId(), stream2.getId());
+    List<KemmStream> foundStreams = streamRepository.findByIdIn(ids);
 
-    // Assert: Verify that only non-deprecated streams are returned
-    assertNotNull(availableStreams);
-    assertEquals(1, availableStreams.size());
-    assertEquals("ACTIVE_ALIAS", availableStreams.get(0).getAlias());
+    // Assert: Verify that both streams are returned
+    assertNotNull(foundStreams);
+    assertEquals(2, foundStreams.size());
+    assertTrue(foundStreams.stream().anyMatch(s -> s.getId().equals(stream1.getId())));
+    assertTrue(foundStreams.stream().anyMatch(s -> s.getId().equals(stream2.getId())));
 }
