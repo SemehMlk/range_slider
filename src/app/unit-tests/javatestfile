@@ -1,60 +1,38 @@
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.TestPropertySource;
+@Test
+public void testFindAvailableStreams() {
+    // Arrange: Insert a stream with deprecated as false (or null)
+    KemmMqStream activeStream = KemmMqStream.builder()
+            .upStreamQueue("active_queue")
+            .downStreamQueue("down_stream_queue")
+            .alias("ACTIVE_ALIAS")
+            .application("application")
+            .direction(KemmStreamDirection.INBOUND)
+            .state(KemmStreamState.OK)
+            .status(KemmStreamStatus.INACTIVE)
+            .type(KemmStreamType.MQ)
+            .deprecated(false) // or set this to null to test that case
+            .build();
+    streamRepository.save(activeStream);
 
-import java.util.Collections;
-import java.util.List;
+    // Insert a deprecated stream
+    KemmMqStream deprecatedStream = KemmMqStream.builder()
+            .upStreamQueue("deprecated_queue")
+            .downStreamQueue("down_stream_queue")
+            .alias("DEPRECATED_ALIAS")
+            .application("application")
+            .direction(KemmStreamDirection.OUTBOUND)
+            .state(KemmStreamState.OK)
+            .status(KemmStreamStatus.INACTIVE)
+            .type(KemmStreamType.MQ)
+            .deprecated(true) // Deprecated set to true
+            .build();
+    streamRepository.save(deprecatedStream);
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.*;
+    // Act: Find all available streams
+    List<KemmStream> availableStreams = streamRepository.findAvailableStreams();
 
-@SpringBootTest  // Charger le contexte Spring complet
-@TestPropertySource("classpath:application-test.properties")  // Charger les propriétés depuis application-test.properties
-class StreamsServiceTest {
-
-    @MockBean
-    private StreamRepository streamRepository;  // Mock StreamRepository
-
-    @MockBean
-    private StreamMapper streamMapper;  // Mock StreamMapper
-
-    @Autowired
-    private StreamsService streamsService;  // Injecter StreamsService
-
-    @Autowired
-    private StreamProperties streamProperties;  // Injecter StreamProperties depuis application-test.properties
-
-    @Test
-    void testGetAllStreams() {
-        // Vérifier que les propriétés sont bien injectées depuis application-test.properties
-        assertThat(streamProperties.getSndFlexTo()).isEqualTo("SND_FLEX_TO_");
-        assertThat(streamProperties.getToFlex()).isEqualTo("_TO_FLEX");
-        assertThat(streamProperties.getRcv()).isEqualTo("RCV_");
-
-        // Mock d'un stream à partir du repository
-        KemmStream genericStream = mock(KemmStream.class);
-        StreamDto genericStreamDto = new StreamDto();
-
-        // Configurer le repository pour qu'il retourne une liste avec un stream
-        when(streamRepository.findAll()).thenReturn(Collections.singletonList(genericStream));
-
-        // Configurer le mapper pour qu'il convertisse KemmStream en StreamDto
-        when(streamMapper.mapToDto(genericStream)).thenReturn(genericStreamDto);
-
-        // Exécution du service
-        ResponseEntity<List<StreamDto>> response = streamsService.getAllStreams();
-
-        // Vérifier que le repository et le mapper ont bien été appelés
-        verify(streamRepository, times(1)).findAll();
-        verify(streamMapper, times(1)).mapToDto(genericStream);
-
-        // Vérifier la réponse retournée
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(1);
-        assertThat(response.getBody().get(0)).isEqualTo(genericStreamDto);
-    }
+    // Assert: Verify that only non-deprecated streams are returned
+    assertNotNull(availableStreams);
+    assertEquals(1, availableStreams.size());
+    assertEquals("ACTIVE_ALIAS", availableStreams.get(0).getAlias());
 }
