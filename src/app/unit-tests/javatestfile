@@ -1,39 +1,40 @@
-@Test
-public void testFindByIdIn() {
-    // Arrange: Create and save multiple streams
-    KemmMqStream stream1 = KemmMqStream.builder()
-            .upStreamQueue("queue1")
-            .downStreamQueue("down_stream_queue1")
-            .alias("ALIAS1")
-            .application("application1")
-            .direction(KemmStreamDirection.INBOUND)
-            .state(KemmStreamState.OK)
-            .status(KemmStreamStatus.INACTIVE)
-            .type(KemmStreamType.MQ)
-            .deprecated(false) // or set this to null
-            .build();
-    streamRepository.save(stream1);
+import { SnackBarComponent } from './snack-bar.component'; // Adjust the import path as needed
 
-    KemmMqStream stream2 = KemmMqStream.builder()
-            .upStreamQueue("queue2")
-            .downStreamQueue("down_stream_queue2")
-            .alias("ALIAS2")
-            .application("application2")
-            .direction(KemmStreamDirection.OUTBOUND)
-            .state(KemmStreamState.OK)
-            .status(KemmStreamStatus.ACTIVE)
-            .type(KemmStreamType.MQ)
-            .deprecated(false) // or set this to null
-            .build();
-    streamRepository.save(stream2);
+describe('SnackBarComponent', () => {
+  let component: SnackBarComponent;
 
-    // Act: Find streams by their IDs
-    List<Long> ids = List.of(stream1.getId(), stream2.getId());
-    List<KemmStream> foundStreams = streamRepository.findByIdIn(ids);
+  beforeEach(() => {
+    // Initialize your component with any required dependencies
+    component = new SnackBarComponent({ message: null });
+  });
 
-    // Assert: Verify that both streams are returned
-    assertNotNull(foundStreams);
-    assertEquals(2, foundStreams.size());
-    assertTrue(foundStreams.stream().anyMatch(s -> s.getId().equals(stream1.getId())));
-    assertTrue(foundStreams.stream().anyMatch(s -> s.getId().equals(stream2.getId())));
-}
+  describe('isArrayOfErrors', () => {
+    it('should return true if data.message is an array', () => {
+      component['data'] = { message: ['error1', 'error2'] }; // Set message as an array
+      expect(component.isArrayOfErrors).toBe(true);
+    });
+
+    it('should return false if data.message is not an array', () => {
+      component['data'] = { message: 'This is an error message' }; // Set message as a string
+      expect(component.isArrayOfErrors).toBe(false);
+    });
+
+    it('should return false if data.message is null or undefined', () => {
+      component['data'] = { message: null };
+      expect(component.isArrayOfErrors).toBe(false);
+    });
+  });
+
+  describe('errorMessage', () => {
+    it('should return the message as a string', () => {
+      const message = 'This is an error message';
+      component['data'] = { message };
+      expect(component.errorMessage).toBe(message);
+    });
+
+    it('should return an empty string if data.message is not set', () => {
+      component['data'] = { message: null };
+      expect(component.errorMessage).toBe('');
+    });
+  });
+});
