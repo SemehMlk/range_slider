@@ -1,40 +1,31 @@
-import { SnackBarComponent } from './snack-bar.component'; // Adjust the import path as needed
+@Mapper(componentModel = "spring", uses = {FeatureMapper.class})
+public interface ProfileMapper {
 
-describe('SnackBarComponent', () => {
-  let component: SnackBarComponent;
+    @Mapping(source = "features", target = "featuresGroup")
+    ProfileDTO toDto(Profile profile);
 
-  beforeEach(() => {
-    // Initialize your component with any required dependencies
-    component = new SnackBarComponent({ message: null });
-  });
+    Profile toEntity(ProfileDTO profileDTO);
 
-  describe('isArrayOfErrors', () => {
-    it('should return true if data.message is an array', () => {
-      component['data'] = { message: ['error1', 'error2'] }; // Set message as an array
-      expect(component.isArrayOfErrors).toBe(true);
-    });
+    // Méthode pour grouper les features par type
+    default List<FeatureGroupDTO> mapFeaturesToFeatureGroups(List<Feature> features) {
+        return features.stream()
+                .collect(Collectors.groupingBy(Feature::getType)) // Grouper par type
+                .entrySet()
+                .stream()
+                .map(entry -> {
+                    FeatureGroupDTO groupDTO = new FeatureGroupDTO();
+                    groupDTO.setType(entry.getKey()); // Type
+                    groupDTO.setFeatures(
+                        entry.getValue().stream()
+                        .map(feature -> toFeatureDto(feature)) // Mapper les features en FeatureDTO
+                        .collect(Collectors.toList())
+                    );
+                    return groupDTO;
+                })
+                .collect(Collectors.toList());
+    }
 
-    it('should return false if data.message is not an array', () => {
-      component['data'] = { message: 'This is an error message' }; // Set message as a string
-      expect(component.isArrayOfErrors).toBe(false);
-    });
-
-    it('should return false if data.message is null or undefined', () => {
-      component['data'] = { message: null };
-      expect(component.isArrayOfErrors).toBe(false);
-    });
-  });
-
-  describe('errorMessage', () => {
-    it('should return the message as a string', () => {
-      const message = 'This is an error message';
-      component['data'] = { message };
-      expect(component.errorMessage).toBe(message);
-    });
-
-    it('should return an empty string if data.message is not set', () => {
-      component['data'] = { message: null };
-      expect(component.errorMessage).toBe('');
-    });
-  });
-});
+    // Méthode pour mapper une feature en DTO (à utiliser dans la méthode personnalisée)
+    @Mapping(target = "type", ignore = true) // On ignore le type dans le DTO
+    FeatureDTO toFeatureDto(Feature feature);
+}
