@@ -1,31 +1,164 @@
-@Mapper(componentModel = "spring", uses = {FeatureMapper.class})
-public interface ProfileMapper {
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
 
-    @Mapping(source = "features", target = "featuresGroup")
-    ProfileDTO toDto(Profile profile);
+class ProfileMapperTest {
 
-    Profile toEntity(ProfileDTO profileDTO);
+    private final ProfileMapper profileMapper = new ProfileMapperImpl(); // MapStruct généré
 
-    // Méthode pour grouper les features par type
-    default List<FeatureGroupDTO> mapFeaturesToFeatureGroups(List<Feature> features) {
-        return features.stream()
-                .collect(Collectors.groupingBy(Feature::getType)) // Grouper par type
-                .entrySet()
-                .stream()
-                .map(entry -> {
-                    FeatureGroupDTO groupDTO = new FeatureGroupDTO();
-                    groupDTO.setType(entry.getKey()); // Type
-                    groupDTO.setFeatures(
-                        entry.getValue().stream()
-                        .map(feature -> toFeatureDto(feature)) // Mapper les features en FeatureDTO
-                        .collect(Collectors.toList())
-                    );
-                    return groupDTO;
-                })
-                .collect(Collectors.toList());
+    @Test
+    void testMapFeaturesToFeatureGroups() {
+        // Création de deux features avec le même type
+        KemmFeatureAuthorization feature1 = new KemmFeatureAuthorization();
+        feature1.setId(1L);
+        feature1.setCode("GET_FLOWS");
+        feature1.setType(FeatureType.FLOWS); // Enum type
+
+        KemmFeatureAuthorization feature2 = new KemmFeatureAuthorization();
+        feature2.setId(2L);
+        feature2.setCode("EXPORT_FLOWS");
+        feature2.setType(FeatureType.FLOWS); // Enum type
+
+        // Ajout des features dans un set
+        Set<KemmFeatureAuthorization> features = new HashSet<>();
+        features.add(feature1);
+        features.add(feature2);
+
+        // Appel de la méthode à tester
+        List<FeatureGroupDTO> featureGroups = profileMapper.mapFeaturesToFeatureGroups(features);
+
+        // Vérification du résultat
+        assertEquals(1, featureGroups.size()); // Un seul groupe car même type
+        assertEquals("FLOWS", featureGroups.get(0).getType()); // Le type est correct
+        assertEquals(2, featureGroups.get(0).getFeatures().size()); // 2 features dans ce groupe
     }
 
-    // Méthode pour mapper une feature en DTO (à utiliser dans la méthode personnalisée)
-    @Mapping(target = "type", ignore = true) // On ignore le type dans le DTO
-    FeatureDTO toFeatureDto(Feature feature);
+    @Test
+    void testToDto() {
+        // Création d'un profil et des features associées
+        KemmUserProfile profile = new KemmUserProfile();
+        profile.setId(1L);
+        profile.setRole("ADMIN");
+        profile.setCreationDate(LocalDate.of(2023, 10, 9));
+        profile.setUserId(100L);
+
+        KemmFeatureAuthorization feature1 = new KemmFeatureAuthorization();
+        feature1.setId(1L);
+        feature1.setCode("GET_FLOWS");
+        feature1.setType(FeatureType.FLOWS);
+
+        Set<KemmFeatureAuthorization> features = new HashSet<>();
+        features.add(feature1);
+
+        profile.setFeatures(features);
+
+        // Appel de la méthode toDto
+        ProfileDto profileDto = profileMapper.toDto(profile);
+
+        // Vérification du mapping
+        assertEquals(1L, profileDto.getId());
+        assertEquals("ADMIN", profileDto.getRole());
+        assertEquals(100L, profileDto.getUserId());
+        assertEquals(1, profileDto.getFeaturesGroup().size());
+        assertEquals("FLOWS", profileDto.getFeaturesGroup().get(0).getType());
+        assertEquals(1, profileDto.getFeaturesGroup().get(0).getFeatures().size());
+    }
+}
+
+
+
+
+
+
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import java.util.List;
+import java.util.Optional;
+import org.springframework.http.ResponseEntity;
+
+class ProfileServiceTest {
+
+    @Mock
+    private KemmUserProfileRepository profileRepository;
+
+    @Mock
+    private ProfileMapper profileMapper;
+
+    @InjectMocks
+    private ProfileService profileService;
+
+    public ProfileServiceTest() {
+        MockitoAnnotations.openMocks(this); // Initialiser les mocks
+    }
+
+    @Test
+    void testGetAllProfiles() {
+        // Préparation des données mockées
+        KemmUserProfile profile1 = new KemmUserProfile();
+        profile1.setId(1L);
+
+        KemmUserProfile profile2 = new KemmUserProfile();
+        profile2.setId(2L);
+
+        List<KemmUserProfile> profiles = List.of(profile1, profile2);
+        when(profileRepository.findAll()).thenReturn(profiles);
+
+        ProfileDto profileDto1 = new ProfileDto();
+        profileDto1.setId(1L);
+
+        ProfileDto profileDto2 = new ProfileDto();
+        profileDto2.setId(2L);
+
+        when(profileMapper.toDto(profile1)).thenReturn(profileDto1);
+        when(profileMapper.toDto(profile2)).thenReturn(profileDto2);
+
+        // Appel de la méthode à tester
+        ResponseEntity<List<ProfileDto>> response = profileService.getAllProfiles();
+
+        // Vérifications
+        assertEquals(2, response.getBody().size());
+        assertEquals(1L, response.getBody().get(0).getId());
+        assertEquals(2L, response.getBody().get(1).getId());
+        verify(profileRepository, times(1)).findAll();
+    }
+
+    @Test
+    void testGetProfileById() {
+        // Préparation des données mockées
+        KemmUserProfile profile = new KemmUserProfile();
+        profile.setId(1L);
+
+        ProfileDto profileDto = new ProfileDto();
+        profileDto.setId(1L);
+
+        when(profileRepository.findById(1L)).thenReturn(Optional.of(profile));
+        when(profileMapper.toDto(profile)).thenReturn(profileDto);
+
+        // Appel de la méthode à tester
+        ResponseEntity<ProfileDto> response = profileService.getProfileById(1L);
+
+        // Vérifications
+        assertEquals(1L, response.getBody().getId());
+        verify(profileRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    void testGetProfileByIdNotFound() {
+        // Simuler l'absence de profil
+        when(profileRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Appel de la méthode et vérification de l'exception
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            profileService.getProfileById(1L);
+        });
+
+        assertEquals("Profile not found", exception.getMessage());
+        verify(profileRepository, times(1)).findById(1L);
+    }
 }
