@@ -1,70 +1,13 @@
-@Mapper(componentModel = "spring", uses = {FeatureMapper.class})
-public interface ProfileMapper {
-
-    // Mapper DTO vers Entity
-    @Mapping(source = "featuresGroup", target = "features")
-    Profile toEntity(ProfileDto profileDto);
-
-    // Mapper Entity vers DTO (pour référence)
-    @Mapping(source = "features", target = "featuresGroup")
-    ProfileDto toDto(Profile profile);
-
-    // Méthode pour démapper les groupes de features et obtenir une liste aplatie de features
-    default Set<KemmFeatureAuthorization> mapFeatureGroupsToFeatures(List<FeatureGroupDTO> featureGroups) {
-        return featureGroups.stream()
-                .flatMap(group -> group.getFeatures().stream()) // Aplatissement des features
-                .map(this::toFeatureEntity) // Conversion en entité Feature
-                .collect(Collectors.toSet()); // Regroupe les features en Set (ou List)
-    }
-
-    // Méthode pour mapper un DTO Feature vers une entité Feature
-    FeatureDTO toFeatureDto(KemmFeatureAuthorization feature);
-    
-    // Méthode pour mapper une FeatureDTO en entité
-    @Mapping(target = "type", source = "type")  // Mapper le champ type
-    KemmFeatureAuthorization toFeatureEntity(FeatureDTO featureDto);
-}
-
-
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
-import java.util.List;
-
-class ProfileMapperTest {
-
-    private final ProfileMapper profileMapper = new ProfileMapperImpl();
-
-    @Test
-    void testToEntity() {
-        // Création d'un ProfileDto avec des groupes de features
-        FeatureDTO featureDto1 = new FeatureDTO();
-        featureDto1.setId(1L);
-        featureDto1.setCode("GET_FLOWS");
-        featureDto1.setDescription("Get all flows");
-
-        FeatureDTO featureDto2 = new FeatureDTO();
-        featureDto2.setId(2L);
-        featureDto2.setCode("EXPORT_FLOWS");
-        featureDto2.setDescription("Export all flows");
-
-        FeatureGroupDTO groupDto = new FeatureGroupDTO();
-        groupDto.setType("FLOWS");
-        groupDto.setFeatures(List.of(featureDto1, featureDto2));
-
-        ProfileDto profileDto = new ProfileDto();
-        profileDto.setId(1L);
-        profileDto.setRole("ADMIN");
-        profileDto.setCreationDate(LocalDate.of(2023, 10, 9));
-        profileDto.setUserId(100L);
-        profileDto.setFeaturesGroup(List.of(groupDto));
-
-        // Appel de la méthode à tester
-        Profile profile = profileMapper.toEntity(profileDto);
-
-        // Vérifications
-        assertEquals(1L, profile.getId());
-        assertEquals("ADMIN", profile.getRole());
-        assertEquals(100L, profile.getUserId());
-        assertEquals(2, profile.getFeatures().size()); // 2 features aplaties
-    }
-}
+ buildFeatureList(userFeatures: any[], allFeatures: any[]): any[] {
+    // Parcourir toutes les fonctionnalités possibles
+    return allFeatures.map(featureGroup => {
+      const userGroup = userFeatures.find(ug => ug.type === featureGroup.type);
+      return {
+        type: featureGroup.type,
+        features: featureGroup.features.map(feature => ({
+          ...feature,
+          checked: userGroup ? !!userGroup.features.find(f => f.id === feature.id) : false
+        }))
+      };
+    });
+  }
