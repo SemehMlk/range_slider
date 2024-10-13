@@ -1,13 +1,21 @@
- buildFeatureList(userFeatures: any[], allFeatures: any[]): any[] {
-    // Parcourir toutes les fonctionnalités possibles
-    return allFeatures.map(featureGroup => {
-      const userGroup = userFeatures.find(ug => ug.type === featureGroup.type);
-      return {
-        type: featureGroup.type,
-        features: featureGroup.features.map(feature => ({
-          ...feature,
-          checked: userGroup ? !!userGroup.features.find(f => f.id === feature.id) : false
-        }))
-      };
-    });
-  }
+buildFeatureList(userFeatures: KemmFeatureGroup[], allFeatures: any[]): any[] {
+  return allFeatures.map(featureGroup => {
+    // Trouver le groupe de fonctionnalités correspondant dans les fonctionnalités de l'utilisateur
+    const userGroup = userFeatures.find(ug => ug.type === featureGroup.type);
+    
+    // Parcourir chaque fonctionnalité et ajouter `checked`
+    const updatedFeatures = featureGroup.features.map(feature => ({
+      ...feature,
+      checked: userGroup ? !!userGroup.features.find(f => f.id === feature.id) : false
+    }));
+
+    // Vérifier si tous les éléments enfants (features) sont cochés
+    const allChecked = updatedFeatures.every(f => f.checked);
+
+    return {
+      type: featureGroup.type,
+      features: updatedFeatures,
+      checked: allChecked  // Le parent est checked si et seulement si tous les features sont cochés
+    };
+  });
+}
