@@ -1,21 +1,53 @@
-buildFeatureList(userFeatures: KemmFeatureGroup[], allFeatures: any[]): any[] {
-  return allFeatures.map(featureGroup => {
-    // Trouver le groupe de fonctionnalités correspondant dans les fonctionnalités de l'utilisateur
-    const userGroup = userFeatures.find(ug => ug.type === featureGroup.type);
-    
-    // Parcourir chaque fonctionnalité et ajouter `checked`
-    const updatedFeatures = featureGroup.features.map(feature => ({
-      ...feature,
-      checked: userGroup ? !!userGroup.features.find(f => f.id === feature.id) : false
-    }));
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-    // Vérifier si tous les éléments enfants (features) sont cochés
-    const allChecked = updatedFeatures.every(f => f.checked);
+    <!-- Étape 1 : Stocker la valeur de la séquence actuelle dans une variable temporaire -->
+    <changeSet id="1" author="your_name">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT count(*) FROM information_schema.sequences WHERE sequence_name = 'your_sequence_name';
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            CREATE TABLE temp_sequence_value (sequence_value BIGINT);
+            INSERT INTO temp_sequence_value(sequence_value) 
+            VALUES ((SELECT last_value FROM your_sequence_name));
+        </sql>
+    </changeSet>
 
-    return {
-      type: featureGroup.type,
-      features: updatedFeatures,
-      checked: allChecked  // Le parent est checked si et seulement si tous les features sont cochés
-    };
-  });
-}
+    <!-- Étape 2 : Créer les nouvelles séquences en utilisant cette valeur -->
+    <changeSet id="2" author="your_name">
+        <sql>
+            DO $$ BEGIN
+                DECLARE seq_val BIGINT;
+                SELECT sequence_value INTO seq_val FROM temp_sequence_value;
+
+                -- Créer une nouvelle séquence pour messages
+                EXECUTE format('CREATE SEQUENCE messages_seq START WITH %s;', seq_val);
+
+                -- Créer une nouvelle séquence pour notifications
+                EXECUTE format('CREATE SEQUENCE notifications_seq START WITH %s;', seq_val);
+            END $$;
+        </sql>
+    </changeSet>
+
+    <!-- Étape 3 : Associer les nouvelles séquences aux tables -->
+    <changeSet id="3" author="your_name">
+        <sql>
+            ALTER TABLE messages ALTER COLUMN id SET DEFAULT nextval('messages_seq');
+            ALTER TABLE notifications ALTER COLUMN id SET DEFAULT nextval('notifications_seq');
+        </sql>
+    </changeSet>
+
+    <!-- Étape 4 : Supprimer l'ancienne séquence et la table temporaire -->
+    <changeSet id="4" author="your_name">
+        <sql>
+            DROP SEQUENCE your_sequence_name;
+            DROP TABLE temp_sequence_value;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
