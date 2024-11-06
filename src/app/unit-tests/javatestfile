@@ -1,17 +1,26 @@
-<?xml version="1.0" encoding="UTF-8"?>
+const operatorMap = new Map([
+    [FlxApiConditionOperator.EQUAL, (searchValue: any) => buildEqualDateTimeCriteria(searchValue as Date, searchField, false)],
+    [FlxApiConditionOperator.NOT_EQUAL, (searchValue: any) => buildEqualDateTimeCriteria(searchValue as Date, searchField, true)],
+    [FlxApiConditionOperator.BETWEEN, (searchValue: any) => buildBetweenDateTimeCriteria(searchValue as DateRange, searchField)],
+    [FlxApiConditionOperator.GREATER_THAN, (searchValue: any) => buildGreaterThanDateTimeCriteria(searchValue as Date, searchField, true)],
+    [FlxApiConditionOperator.GREATER_THAN_OR_EQUAL, (searchValue: any) => buildGreaterThanDateTimeCriteria(searchValue as Date, searchField, false)],
+    [FlxApiConditionOperator.LESS_THAN, (searchValue: any) => buildLessThanDateTimeCriteria(searchValue as Date, searchField, true)],
+    [FlxApiConditionOperator.LESS_THAN_OR_EQUAL, (searchValue: any) => buildLessThanDateTimeCriteria(searchValue as Date, searchField, false)],
+    [FlxApiConditionOperator.IN_LAST_TIME_LAPSE, (searchValue: any) => buildElapsedTimeCriteria(searchValue as ElapsedTime, searchField)]
+]);
 
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
-
-    <!-- ChangeSet for modifying the value_date column type to DATE -->
-    <changeSet id="modify-column-value_date-to-date" author="your_name">
-        <modifyDataType
-            tableName="transactions"
-            columnName="value_date"
-            newDataType="DATE"/>
-    </changeSet>
-
-</databaseChangeLog>
+function buildDateTimeTypeCriteria(field: any, operator: FlxApiConditionOperator, searchValue: any) {
+    const searchField = {
+        fieldType: FlxApiSearchableField.FieldTypeEnum.DATETIME,
+        field: field.field,
+        fieldContext: FlxApiSearchContext.TECHNICAL_FLOW,
+        operators: field.operators
+    };
+    
+    const criteriaFunction = operatorMap.get(operator);
+    if (criteriaFunction) {
+        return criteriaFunction(searchValue);
+    }
+    
+    throw new Error(`Unsupported operator: ${operator}`);
+}
