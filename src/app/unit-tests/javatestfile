@@ -1,26 +1,30 @@
-const operatorMap = new Map([
-    [FlxApiConditionOperator.EQUAL, (searchValue: any) => buildEqualDateTimeCriteria(searchValue as Date, searchField, false)],
-    [FlxApiConditionOperator.NOT_EQUAL, (searchValue: any) => buildEqualDateTimeCriteria(searchValue as Date, searchField, true)],
-    [FlxApiConditionOperator.BETWEEN, (searchValue: any) => buildBetweenDateTimeCriteria(searchValue as DateRange, searchField)],
-    [FlxApiConditionOperator.GREATER_THAN, (searchValue: any) => buildGreaterThanDateTimeCriteria(searchValue as Date, searchField, true)],
-    [FlxApiConditionOperator.GREATER_THAN_OR_EQUAL, (searchValue: any) => buildGreaterThanDateTimeCriteria(searchValue as Date, searchField, false)],
-    [FlxApiConditionOperator.LESS_THAN, (searchValue: any) => buildLessThanDateTimeCriteria(searchValue as Date, searchField, true)],
-    [FlxApiConditionOperator.LESS_THAN_OR_EQUAL, (searchValue: any) => buildLessThanDateTimeCriteria(searchValue as Date, searchField, false)],
-    [FlxApiConditionOperator.IN_LAST_TIME_LAPSE, (searchValue: any) => buildElapsedTimeCriteria(searchValue as ElapsedTime, searchField)]
+const criteriaBuilders = new Map<FlxApiSearchableField.FieldTypeEnum, (criteria: FilterCriteria) => FlxApiSearchCriteria | null>([
+    [FlxApiSearchableField.FieldTypeEnum.ENUM, (criteria) =>
+        isFilterValid(criteria) ? buildListTypeCriteria(criteria.field, criteria.value, criteria.operator !== FlxApiConditionOperator.NOT_IN) : null
+    ],
+    [FlxApiSearchableField.FieldTypeEnum.TEXT, (criteria) =>
+        isFilterValid(criteria) ? buildTextTypeCriteria(criteria.field, criteria.value, criteria.operator) : null
+    ],
+    [FlxApiSearchableField.FieldTypeEnum.NUMBER, (criteria) =>
+        isFilterValid(criteria) ? buildNumberTypeCriteria(criteria.field, criteria.value, criteria.operator) : null
+    ],
+    [FlxApiSearchableField.FieldTypeEnum.DATETIME, (criteria) =>
+        isFilterValid(criteria) ? buildDateTimeTypeCriteria(criteria.field, criteria.value, criteria.operator) : null
+    ]
 ]);
 
-function buildDateTimeTypeCriteria(field: any, operator: FlxApiConditionOperator, searchValue: any) {
-    const searchField = {
-        fieldType: FlxApiSearchableField.FieldTypeEnum.DATETIME,
-        field: field.field,
-        fieldContext: FlxApiSearchContext.TECHNICAL_FLOW,
-        operators: field.operators
-    };
-    
-    const criteriaFunction = operatorMap.get(operator);
-    if (criteriaFunction) {
-        return criteriaFunction(searchValue);
+export function buildCriterias(criteriaList: FilterCriteria[]): FlxApiSearchCriteria[] {
+    const backendCriterias: FlxApiSearchCriteria[] = [];
+
+    for (const criteria of criteriaList) {
+        const builder = criteriaBuilders.get(criteria.fieldType);
+        if (builder) {
+            const backendCriteria = builder(criteria);
+            if (backendCriteria) {
+                backendCriterias.push(backendCriteria);
+            }
+        }
     }
-    
-    throw new Error(`Unsupported operator: ${operator}`);
+
+    return backendCriterias;
 }
