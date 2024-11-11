@@ -1,30 +1,76 @@
-const criteriaBuilders = new Map<FlxApiSearchableField.FieldTypeEnum, (criteria: FilterCriteria) => FlxApiSearchCriteria | null>([
-    [FlxApiSearchableField.FieldTypeEnum.ENUM, (criteria) =>
-        isFilterValid(criteria) ? buildListTypeCriteria(criteria.field, criteria.value, criteria.operator !== FlxApiConditionOperator.NOT_IN) : null
-    ],
-    [FlxApiSearchableField.FieldTypeEnum.TEXT, (criteria) =>
-        isFilterValid(criteria) ? buildTextTypeCriteria(criteria.field, criteria.value, criteria.operator) : null
-    ],
-    [FlxApiSearchableField.FieldTypeEnum.NUMBER, (criteria) =>
-        isFilterValid(criteria) ? buildNumberTypeCriteria(criteria.field, criteria.value, criteria.operator) : null
-    ],
-    [FlxApiSearchableField.FieldTypeEnum.DATETIME, (criteria) =>
-        isFilterValid(criteria) ? buildDateTimeTypeCriteria(criteria.field, criteria.value, criteria.operator) : null
-    ]
-]);
+export class CriteriaValueComponent {
+    @Input() criteria: FilterCriteria;
 
-export function buildCriterias(criteriaList: FilterCriteria[]): FlxApiSearchCriteria[] {
-    const backendCriterias: FlxApiSearchCriteria[] = [];
+    constructor(private translateService: TranslateService) {}
 
-    for (const criteria of criteriaList) {
-        const builder = criteriaBuilders.get(criteria.fieldType);
-        if (builder) {
-            const backendCriteria = builder(criteria);
-            if (backendCriteria) {
-                backendCriterias.push(backendCriteria);
-            }
-        }
+    private operatorTextMap = new Map<FlxApiConditionOperator, () => string>([
+        [FlxApiConditionOperator.IN, () =>
+            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
+            `${this.isDefined(this.criteria.value) ? this.criteria.value?.join(', ') : ''}`
+        ],
+        [FlxApiConditionOperator.NOT_IN, () =>
+            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
+            `${this.isDefined(this.criteria.value) ? this.criteria.value?.join(', ') : ''}`
+        ],
+        [FlxApiConditionOperator.EQUAL, () =>
+            this.equalCriteriaDisplayedValue(this.criteria, this.translateService)
+        ],
+        [FlxApiConditionOperator.NOT_EQUAL, () =>
+            this.equalCriteriaDisplayedValue(this.criteria, this.translateService)
+        ],
+        [FlxApiConditionOperator.CONTAINS, () =>
+            `<span>${this.translateService.instant('search.operators.' + this.criteria.operator).toLowerCase()}</span> ` +
+            `${this.criteria?.value ?? ''}`
+        ],
+        [FlxApiConditionOperator.NOT_CONTAINS, () =>
+            `<span>${this.translateService.instant('search.operators.' + this.criteria.operator).toLowerCase()}</span> ` +
+            `${this.criteria?.value ?? ''}`
+        ],
+        [FlxApiConditionOperator.REGEX, () =>
+            `<span>${this.translateService.instant('search.operators.' + this.criteria.operator)}</span> ` +
+            `${this.criteria?.value ?? ''}`
+        ],
+        [FlxApiConditionOperator.BETWEEN, () =>
+            this.betweenCriteriaDisplayedValue(this.criteria, this.translateService)
+        ],
+        [FlxApiConditionOperator.IN_LAST_TIME_LAPSE, () =>
+            `${this.translateService.instant('search.query.last')} ${this.criteria.value?.timeLapse} ` +
+            `${this.translateService.instant('timeUnits.' + this.criteria.value?.timeUnit)}`
+        ],
+        [FlxApiConditionOperator.GREATER_THAN, () =>
+            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
+            `${this.criteria?.value ?? ''}`
+        ],
+        [FlxApiConditionOperator.GREATER_THAN_OR_EQUAL, () =>
+            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
+            `${this.criteria?.value ?? ''}`
+        ],
+        [FlxApiConditionOperator.LESS_THAN, () =>
+            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
+            `${this.criteria?.value ?? ''}`
+        ],
+        [FlxApiConditionOperator.LESS_THAN_OR_EQUAL, () =>
+            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
+            `${this.criteria?.value ?? ''}`
+        ]
+    ]);
+
+    get criteriaValue(): string {
+        const generateText = this.operatorTextMap.get(this.criteria.operator);
+        return generateText ? generateText() : '';
     }
 
-    return backendCriterias;
+    private isDefined(value: any): boolean {
+        return value !== undefined && value !== null;
+    }
+
+    private equalCriteriaDisplayedValue(criteria: FilterCriteria, translateService: TranslateService): string {
+        // Implementer la logique de `equalCriteriaDisplayedValue` ici
+        return '';
+    }
+
+    private betweenCriteriaDisplayedValue(criteria: FilterCriteria, translateService: TranslateService): string {
+        // Implementer la logique de `betweenCriteriaDisplayedValue` ici
+        return '';
+    }
 }
