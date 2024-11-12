@@ -1,76 +1,37 @@
-export class CriteriaValueComponent {
-    @Input() criteria: FilterCriteria;
+public class CustomMappingStrategy<T> extends ColumnPositionMappingStrategy<T> {
+    private List<String> orderedColumns;
 
-    constructor(private translateService: TranslateService) {}
-
-    private operatorTextMap = new Map<FlxApiConditionOperator, () => string>([
-        [FlxApiConditionOperator.IN, () =>
-            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
-            `${this.isDefined(this.criteria.value) ? this.criteria.value?.join(', ') : ''}`
-        ],
-        [FlxApiConditionOperator.NOT_IN, () =>
-            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
-            `${this.isDefined(this.criteria.value) ? this.criteria.value?.join(', ') : ''}`
-        ],
-        [FlxApiConditionOperator.EQUAL, () =>
-            this.equalCriteriaDisplayedValue(this.criteria, this.translateService)
-        ],
-        [FlxApiConditionOperator.NOT_EQUAL, () =>
-            this.equalCriteriaDisplayedValue(this.criteria, this.translateService)
-        ],
-        [FlxApiConditionOperator.CONTAINS, () =>
-            `<span>${this.translateService.instant('search.operators.' + this.criteria.operator).toLowerCase()}</span> ` +
-            `${this.criteria?.value ?? ''}`
-        ],
-        [FlxApiConditionOperator.NOT_CONTAINS, () =>
-            `<span>${this.translateService.instant('search.operators.' + this.criteria.operator).toLowerCase()}</span> ` +
-            `${this.criteria?.value ?? ''}`
-        ],
-        [FlxApiConditionOperator.REGEX, () =>
-            `<span>${this.translateService.instant('search.operators.' + this.criteria.operator)}</span> ` +
-            `${this.criteria?.value ?? ''}`
-        ],
-        [FlxApiConditionOperator.BETWEEN, () =>
-            this.betweenCriteriaDisplayedValue(this.criteria, this.translateService)
-        ],
-        [FlxApiConditionOperator.IN_LAST_TIME_LAPSE, () =>
-            `${this.translateService.instant('search.query.last')} ${this.criteria.value?.timeLapse} ` +
-            `${this.translateService.instant('timeUnits.' + this.criteria.value?.timeUnit)}`
-        ],
-        [FlxApiConditionOperator.GREATER_THAN, () =>
-            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
-            `${this.criteria?.value ?? ''}`
-        ],
-        [FlxApiConditionOperator.GREATER_THAN_OR_EQUAL, () =>
-            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
-            `${this.criteria?.value ?? ''}`
-        ],
-        [FlxApiConditionOperator.LESS_THAN, () =>
-            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
-            `${this.criteria?.value ?? ''}`
-        ],
-        [FlxApiConditionOperator.LESS_THAN_OR_EQUAL, () =>
-            `<span>${this.translateService.instant('search.query.' + this.criteria.operator)}</span> ` +
-            `${this.criteria?.value ?? ''}`
-        ]
-    ]);
-
-    get criteriaValue(): string {
-        const generateText = this.operatorTextMap.get(this.criteria.operator);
-        return generateText ? generateText() : '';
+    public CustomMappingStrategy(List<String> orderedColumns) {
+        this.orderedColumns = orderedColumns;
     }
 
-    private isDefined(value: any): boolean {
-        return value !== undefined && value !== null;
+    @Override
+    public String[] generateHeader() {
+        return orderedColumns.toArray(new String[0]);
     }
 
-    private equalCriteriaDisplayedValue(criteria: FilterCriteria, translateService: TranslateService): string {
-        // Implementer la logique de `equalCriteriaDisplayedValue` ici
-        return '';
+    @Override
+    public int getColumnIndex(String name) {
+        return orderedColumns.indexOf(name);
     }
+}
 
-    private betweenCriteriaDisplayedValue(criteria: FilterCriteria, translateService: TranslateService): string {
-        // Implementer la logique de `betweenCriteriaDisplayedValue` ici
-        return '';
+public ExportResult exportDataToCsv(Function<Integer, Page<T>> fetchFunction, Function<T, R> mapFunction, List<String> columnOrder) {
+    ...
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    try (OutputStreamWriter outputStreamWriter = new OutputStreamWriter(byteArrayOutputStream)) {
+        CustomMappingStrategy<R> mappingStrategy = new CustomMappingStrategy<>(columnOrder);
+        mappingStrategy.setType(ExportableCanonicalMessageFlow.class);
+
+        StatefulBeanToCsvBuilder<R> builder = new StatefulBeanToCsvBuilder<R>(outputStreamWriter)
+                .withMappingStrategy(mappingStrategy)
+                .withSeparator(SEPARATOR)
+                .withOrderedResults(true);
+
+        StatefulBeanToCsv<R> beanToCsv = builder.build();
+        beanToCsv.write(data); // data est votre liste d'objets à exporter
+    } catch (Exception e) {
+        e.printStackTrace();
     }
+    ...
 }
