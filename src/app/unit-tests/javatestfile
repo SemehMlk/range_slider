@@ -12,35 +12,44 @@ public class ExportCustomMappingStrategy<T> extends ColumnPositionMappingStrateg
     }
 
     @Override
+    public void setColumnMapping(String... columnMapping) {
+        // Configurer l'ordre des colonnes pour correspondre à orderedColumns
+        super.setColumnMapping(orderedColumns.toArray(new String[0]));
+    }
+
+    @Override
     public String[] generateHeader(T bean) throws CsvRequiredFieldEmptyException {
-        // Générer l'en-tête en utilisant orderedColumns et @CsvBindByName
+        // Générer un en-tête basé sur les noms d'export dans @CsvBindByName
         String[] customHeader = new String[orderedColumns.size()];
 
         for (int i = 0; i < orderedColumns.size(); i++) {
-            String requestColumn = orderedColumns.get(i);
-            BeanField beanField = findField(i);
-            String columnHeaderName = extractHeaderName(beanField);
+            String columnName = orderedColumns.get(i);
+            BeanField beanField = findFieldByColumnName(columnName);
 
-            // Utiliser le nom de la colonne défini dans @CsvBindByName si disponible
-            customHeader[i] = (columnHeaderName != null && !columnHeaderName.isEmpty()) ? columnHeaderName : requestColumn;
+            // Utiliser le nom dans @CsvBindByName, sinon le nom brut de la requête
+            customHeader[i] = (beanField != null) ? extractHeaderName(beanField) : columnName;
         }
 
         return customHeader;
     }
 
-    @Override
-    public void setColumnMapping(String... columnMapping) {
-        // Utiliser l'ordre des colonnes spécifié par orderedColumns
-        super.setColumnMapping(orderedColumns.toArray(new String[0]));
+    // Recherche du champ par nom de colonne en utilisant l'annotation @CsvBindByName
+    private BeanField findFieldByColumnName(String columnName) {
+        for (BeanField beanField : getFieldMap().values()) {
+            String headerName = extractHeaderName(beanField);
+            if (headerName != null && headerName.equalsIgnoreCase(columnName)) {
+                return beanField;
+            }
+        }
+        return null;
     }
 
-    // Méthode pour extraire le nom de colonne à partir de l'annotation @CsvBindByName
-    public String extractHeaderName(BeanField beanField) {
-        if (beanField == null || beanField.getField() == null 
-                || beanField.getField().getDeclaredAnnotationsByType(CsvBindByName.class).length == 0) {
-            return "";
+    // Extrait le nom de la colonne défini dans @CsvBindByName
+    private String extractHeaderName(BeanField beanField) {
+        if (beanField == null || beanField.getField() == null) {
+            return null;
         }
-        CsvBindByName bindByNameAnnotation = beanField.getField().getDeclaredAnnotationsByType(CsvBindByName.class)[0];
-        return bindByNameAnnotation.column();
+        CsvBindByName annotation = beanField.getField().getDeclaredAnnotation(CsvBindByName.class);
+        return (annotation != null) ? annotation.column() : null;
     }
 }
