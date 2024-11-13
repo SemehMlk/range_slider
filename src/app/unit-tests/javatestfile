@@ -1,37 +1,74 @@
+import com.opencsv.bean.ColumnPositionMappingStrategy;
+import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 public class CustomMappingStrategy<T> extends ColumnPositionMappingStrategy<T> {
-    private List<String> orderedColumns;
+    private final List<String> orderedColumns;
+    private final Map<String, String> columnMappings;
 
-    public CustomMappingStrategy(List<String> orderedColumns) {
+    public CustomMappingStrategy(List<String> orderedColumns, Map<String, String> columnMappings) {
         this.orderedColumns = orderedColumns;
+        this.columnMappings = columnMappings;
     }
 
     @Override
-    public String[] generateHeader() {
-        return orderedColumns.toArray(new String[0]);
+    public void setColumnMapping(String... columnMapping) {
+        // Utilise les mappings pour transformer les noms de colonnes de la requête en noms d'export
+        List<String> mappedColumns = orderedColumns.stream()
+                .map(columnMappings::get) // Traduire les noms de la requête en noms d'export
+                .collect(Collectors.toList());
+        super.setColumnMapping(mappedColumns.toArray(new String[0]));
     }
 
     @Override
-    public int getColumnIndex(String name) {
-        return orderedColumns.indexOf(name);
+    public String[] generateHeader(T bean) throws CsvRequiredFieldEmptyException {
+        // Utilise les mappings pour générer l'en-tête dans le bon ordre
+        return orderedColumns.stream()
+                .map(columnMappings::get) // Utiliser les noms définis par @CsvBindByName
+                .toArray(String[]::new);
     }
 }
 
-public ExportResult exportDataToCsv(Function<Integer, Page<T>> fetchFunction, Function<T, R> mapFunction, List<String> columnOrder) {
-    ...
-    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-    try (OutputStreamWriter outputStreamWriter = new OutputStreamWriter(byteArrayOutputStream)) {
-        CustomMappingStrategy<R> mappingStrategy = new CustomMappingStrategy<>(columnOrder);
-        mappingStrategy.setType(ExportableCanonicalMessageFlow.class);
 
-        StatefulBeanToCsvBuilder<R> builder = new StatefulBeanToCsvBuilder<R>(outputStreamWriter)
-                .withMappingStrategy(mappingStrategy)
-                .withSeparator(SEPARATOR)
-                .withOrderedResults(true);
+import com.opencsv.bean.CsvBindByName;
+import java.util.HashMap;
+import java.util.Map;
 
-        StatefulBeanToCsv<R> beanToCsv = builder.build();
-        beanToCsv.write(data); // data est votre liste d'objets à exporter
-    } catch (Exception e) {
-        e.printStackTrace();
+public class ExportableCanonicalMessageFlow {
+    @CsvBindByName(column = "ID")
+    private Long id;
+
+    @CsvBindByName(column = "APPLICATION")
+    private String application;
+
+    @CsvBindByName(column = "DIRECTION")
+    private String direction;
+
+    @CsvBindByName(column = "GLOBAL STATUS")
+    private String globalStatus;
+
+    @CsvBindByName(column = "TRANSLATION STATUS")
+    private String translationStatus;
+
+    // Ajoutez les autres champs ici
+
+    // Méthode statique pour le mappage des noms de colonnes de requête vers les noms d'export
+    public static Map<String, String> getColumnMappings() {
+        Map<String, String> mappings = new HashMap<>();
+        mappings.put("id", "ID");
+        mappings.put("application", "APPLICATION");
+        mappings.put("direction", "DIRECTION");
+        mappings.put("globalStatus", "GLOBAL STATUS");
+        mappings.put("translationStatus", "TRANSLATION STATUS");
+        // Ajoutez les autres mappings ici
+        return mappings;
     }
-    ...
+
+    // Getters et setters pour chaque champ
 }
+
+
+
+
