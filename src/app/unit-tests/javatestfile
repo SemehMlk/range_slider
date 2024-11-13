@@ -12,21 +12,18 @@ public class ExportCustomMappingStrategy<T> extends ColumnPositionMappingStrateg
 
     @Override
     public String[] generateHeader(T bean) throws CsvRequiredFieldEmptyException {
-        final int numColumns = orderedColumns.size();
-        String[] customHeader = new String[numColumns];
+        // Générer l'en-tête en utilisant orderedColumns et @CsvBindByName
+        String[] customHeader = new String[orderedColumns.size()];
 
-        for (int i = 0; i < numColumns; i++) {
-            // Obtenir le nom de la colonne de la requête
+        for (int i = 0; i < orderedColumns.size(); i++) {
             String requestColumn = orderedColumns.get(i);
-
-            // Trouver le champ correspondant dans la classe en fonction du nom de la colonne
             BeanField beanField = findFieldByRequestColumn(requestColumn);
             if (beanField != null) {
-                // Obtenir le nom de la colonne défini dans @CsvBindByName
-                String columnHeaderName = extractHeaderName(beanField);
-                customHeader[i] = columnHeaderName != null ? columnHeaderName : requestColumn;
+                // Utiliser le nom de la colonne défini dans @CsvBindByName
+                customHeader[i] = extractHeaderName(beanField);
             } else {
-                customHeader[i] = requestColumn; // Au cas où le champ ne serait pas trouvé
+                // En cas d'absence du champ correspondant, garder le nom de la requête
+                customHeader[i] = requestColumn;
             }
         }
 
@@ -44,10 +41,8 @@ public class ExportCustomMappingStrategy<T> extends ColumnPositionMappingStrateg
 
     // Trouver le champ correspondant au nom de la colonne de la requête
     private BeanField findFieldByRequestColumn(String requestColumn) {
-        for (int i = 0; i < getFieldMap().values().size(); i++) {
-            BeanField beanField = findField(i);
+        for (BeanField beanField : getFieldMap().values()) {
             String columnHeaderName = extractHeaderName(beanField);
-
             // Vérifie si le nom de la colonne dans @CsvBindByName correspond au nom de la requête
             if (columnHeaderName.equalsIgnoreCase(requestColumn)) {
                 return beanField;
