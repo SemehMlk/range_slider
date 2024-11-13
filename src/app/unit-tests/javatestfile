@@ -1,7 +1,7 @@
 import com.opencsv.bean.ColumnPositionMappingStrategy;
+import com.opencsv.bean.CsvBindByName;
 import com.opencsv.bean.BeanField;
 import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
-import com.opencsv.bean.CsvBindByName;
 import java.util.List;
 
 public class ExportCustomMappingStrategy<T> extends ColumnPositionMappingStrategy<T> {
@@ -13,38 +13,36 @@ public class ExportCustomMappingStrategy<T> extends ColumnPositionMappingStrateg
 
     @Override
     public void setColumnMapping(String... columnMapping) {
-        // Configurer l'ordre des colonnes pour correspondre à orderedColumns
+        // Configurer les noms des colonnes en fonction de orderedColumns
         super.setColumnMapping(orderedColumns.toArray(new String[0]));
     }
 
     @Override
     public String[] generateHeader(T bean) throws CsvRequiredFieldEmptyException {
-        // Générer un en-tête basé sur les noms d'export dans @CsvBindByName
-        String[] customHeader = new String[orderedColumns.size()];
+        String[] header = new String[orderedColumns.size()];
 
+        // Remplir le tableau header en utilisant les noms de colonnes dans orderedColumns
         for (int i = 0; i < orderedColumns.size(); i++) {
             String columnName = orderedColumns.get(i);
-            BeanField beanField = findFieldByColumnName(columnName);
-
-            // Utiliser le nom dans @CsvBindByName, sinon le nom brut de la requête
-            customHeader[i] = (beanField != null) ? extractHeaderName(beanField) : columnName;
+            BeanField beanField = findFieldByName(columnName);
+            header[i] = (beanField != null) ? extractHeaderName(beanField) : columnName;
         }
 
-        return customHeader;
+        return header;
     }
 
-    // Recherche du champ par nom de colonne en utilisant l'annotation @CsvBindByName
-    private BeanField findFieldByColumnName(String columnName) {
+    // Trouver un champ en fonction du nom de la colonne de la requête
+    private BeanField findFieldByName(String columnName) {
         for (BeanField beanField : getFieldMap().values()) {
-            String headerName = extractHeaderName(beanField);
-            if (headerName != null && headerName.equalsIgnoreCase(columnName)) {
+            String fieldName = extractHeaderName(beanField);
+            if (fieldName != null && fieldName.equalsIgnoreCase(columnName)) {
                 return beanField;
             }
         }
         return null;
     }
 
-    // Extrait le nom de la colonne défini dans @CsvBindByName
+    // Extrait le nom de colonne défini dans @CsvBindByName
     private String extractHeaderName(BeanField beanField) {
         if (beanField == null || beanField.getField() == null) {
             return null;
