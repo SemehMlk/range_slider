@@ -1,74 +1,68 @@
 import com.opencsv.bean.ColumnPositionMappingStrategy;
+import com.opencsv.bean.BeanField;
 import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
-public class CustomMappingStrategy<T> extends ColumnPositionMappingStrategy<T> {
+public class ExportCustomMappingStrategy<T> extends ColumnPositionMappingStrategy<T> {
     private final List<String> orderedColumns;
-    private final Map<String, String> columnMappings;
 
-    public CustomMappingStrategy(List<String> orderedColumns, Map<String, String> columnMappings) {
+    public ExportCustomMappingStrategy(List<String> orderedColumns) {
         this.orderedColumns = orderedColumns;
-        this.columnMappings = columnMappings;
-    }
-
-    @Override
-    public void setColumnMapping(String... columnMapping) {
-        // Utilise les mappings pour transformer les noms de colonnes de la requête en noms d'export
-        List<String> mappedColumns = orderedColumns.stream()
-                .map(columnMappings::get) // Traduire les noms de la requête en noms d'export
-                .collect(Collectors.toList());
-        super.setColumnMapping(mappedColumns.toArray(new String[0]));
     }
 
     @Override
     public String[] generateHeader(T bean) throws CsvRequiredFieldEmptyException {
-        // Utilise les mappings pour générer l'en-tête dans le bon ordre
-        return orderedColumns.stream()
-                .map(columnMappings::get) // Utiliser les noms définis par @CsvBindByName
-                .toArray(String[]::new);
-    }
-}
+        final int numColumns = orderedColumns.size();
+        String[] customHeader = new String[numColumns];
 
+        for (int i = 0; i < numColumns; i++) {
+            // Obtenir le nom de la colonne de la requête
+            String requestColumn = orderedColumns.get(i);
 
-import com.opencsv.bean.CsvBindByName;
-import java.util.HashMap;
-import java.util.Map;
+            // Trouver le champ correspondant dans la classe en fonction du nom de la colonne
+            BeanField beanField = findFieldByRequestColumn(requestColumn);
+            if (beanField != null) {
+                // Obtenir le nom de la colonne défini dans @CsvBindByName
+                String columnHeaderName = extractHeaderName(beanField);
+                customHeader[i] = columnHeaderName != null ? columnHeaderName : requestColumn;
+            } else {
+                customHeader[i] = requestColumn; // Au cas où le champ ne serait pas trouvé
+            }
+        }
 
-public class ExportableCanonicalMessageFlow {
-    @CsvBindByName(column = "ID")
-    private Long id;
-
-    @CsvBindByName(column = "APPLICATION")
-    private String application;
-
-    @CsvBindByName(column = "DIRECTION")
-    private String direction;
-
-    @CsvBindByName(column = "GLOBAL STATUS")
-    private String globalStatus;
-
-    @CsvBindByName(column = "TRANSLATION STATUS")
-    private String translationStatus;
-
-    // Ajoutez les autres champs ici
-
-    // Méthode statique pour le mappage des noms de colonnes de requête vers les noms d'export
-    public static Map<String, String> getColumnMappings() {
-        Map<String, String> mappings = new HashMap<>();
-        mappings.put("id", "ID");
-        mappings.put("application", "APPLICATION");
-        mappings.put("direction", "DIRECTION");
-        mappings.put("globalStatus", "GLOBAL STATUS");
-        mappings.put("translationStatus", "TRANSLATION STATUS");
-        // Ajoutez les autres mappings ici
-        return mappings;
+        return customHeader;
     }
 
-    // Getters et setters pour chaque champ
+    @Override
+    public BeanField findField(int col) throws CsvRequiredFieldEmptyException {
+        if (col < orderedColumns.size()) {
+            String requestColumn = orderedColumns.get(col);
+            return findFieldByRequestColumn(requestColumn);
+        }
+        return null;
+    }
+
+    // Trouver le champ correspondant au nom de la colonne de la requête
+    private BeanField findFieldByRequestColumn(String requestColumn) {
+        for (int i = 0; i < getFieldMap().values().size(); i++) {
+            BeanField beanField = findField(i);
+            String columnHeaderName = extractHeaderName(beanField);
+
+            // Vérifie si le nom de la colonne dans @CsvBindByName correspond au nom de la requête
+            if (columnHeaderName.equalsIgnoreCase(requestColumn)) {
+                return beanField;
+            }
+        }
+        return null;
+    }
+
+    // Méthode pour extraire le nom de colonne à partir de l'annotation @CsvBindByName
+    public String extractHeaderName(BeanField beanField) {
+        if (beanField == null || beanField.getField() == null 
+                || beanField.getField().getDeclaredAnnotationsByType(CsvBindByName.class).length == 0) {
+            return "";
+        }
+        CsvBindByName bindByNameAnnotation = beanField.getField().getDeclaredAnnotationsByType(CsvBindByName.class)[0];
+        return bindByNameAnnotation.column();
+    }
 }
-
-
-
-
