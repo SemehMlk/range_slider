@@ -1,56 +1,99 @@
-import com.opencsv.bean.ColumnPositionMappingStrategy;
-import com.opencsv.bean.BeanField;
-import com.opencsv.bean.CsvBindByName;
-import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
-import org.apache.commons.lang3.StringUtils;
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
 
-import java.util.List;
-import java.util.Map;
+    <!-- ChangeSet to create the sequence -->
+    <changeSet id="1-create-sequence-user-preferences" author="yourname">
+        <createSequence 
+            sequenceName="user_preferences_id_seq" 
+            startValue="1" 
+            incrementBy="1" />
+    </changeSet>
 
-public class CustomMappingStrategy<T> extends ColumnPositionMappingStrategy<T> {
-    private final List<String> orderedColumns;
-    private final Map<String, String> columnMappings;
+    <!-- ChangeSet to create the table -->
+    <changeSet id="2-create-table-user-preferences" author="yourname">
+        <createTable tableName="user_preferences">
+            <column name="id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="usercode" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="uicontext" type="VARCHAR(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="uiconfig" type="JSONB" />
+        </createTable>
+    </changeSet>
 
-    public CustomMappingStrategy(List<String> orderedColumns, Map<String, String> columnMappings) {
-        this.orderedColumns = orderedColumns;
-        this.columnMappings = columnMappings;
+    <!-- ChangeSet to add the default value for id from the sequence -->
+    <changeSet id="3-add-default-id-sequence" author="yourname">
+        <addDefaultValue 
+            columnName="id" 
+            tableName="user_preferences" 
+            defaultValueComputed="nextval('user_preferences_id_seq')" />
+    </changeSet>
+
+</databaseChangeLog>
+
+
+
+
+package com.example.preferences.entity;
+
+import jakarta.persistence.*;
+import com.fasterxml.jackson.databind.JsonNode;
+
+@Entity
+@Table(name = "user_preferences")
+public class UserPreference {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String usercode;
+
+    @Column(nullable = false)
+    private String uicontext;
+
+    @Column(columnDefinition = "jsonb")
+    private JsonNode uiconfig;
+
+    // Getters and Setters
+    public Long getId() {
+        return id;
     }
 
-    @Override
-    public String[] generateHeader(T bean) throws CsvRequiredFieldEmptyException {
-        String[] customHeader = new String[orderedColumns.size()];
-
-        // Générer les en-têtes dans l'ordre spécifié
-        for (int i = 0; i < orderedColumns.size(); i++) {
-            String requestColumnName = orderedColumns.get(i);
-            // Utiliser le mappage pour obtenir le nom de colonne d'export correspondant
-            String exportColumnName = columnMappings.getOrDefault(requestColumnName, requestColumnName);
-            BeanField beanField = findFieldByExportColumn(exportColumnName);
-
-            // Utiliser le nom dans @CsvBindByName si le champ est trouvé
-            customHeader[i] = (beanField != null) ? extractHeaderName(beanField) : exportColumnName;
-        }
-
-        return customHeader;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    // Recherche du champ en fonction du nom de colonne d'export
-    private BeanField findFieldByExportColumn(String exportColumnName) {
-        for (BeanField beanField : getFieldMap().values()) {
-            String headerName = extractHeaderName(beanField);
-            if (headerName != null && headerName.equals(exportColumnName)) {
-                return beanField;
-            }
-        }
-        return null;
+    public String getUsercode() {
+        return usercode;
     }
 
-    // Extrait le nom de colonne défini dans @CsvBindByName
-    private String extractHeaderName(BeanField beanField) {
-        if (beanField == null || beanField.getField() == null) {
-            return null;
-        }
-        CsvBindByName annotation = beanField.getField().getDeclaredAnnotation(CsvBindByName.class);
-        return (annotation != null) ? annotation.column() : null;
+    public void setUsercode(String usercode) {
+        this.usercode = usercode;
+    }
+
+    public String getUicontext() {
+        return uicontext;
+    }
+
+    public void setUicontext(String uicontext) {
+        this.uicontext = uicontext;
+    }
+
+    public JsonNode getUiconfig() {
+        return uiconfig;
+    }
+
+    public void setUiconfig(JsonNode uiconfig) {
+        this.uiconfig = uiconfig;
     }
 }
