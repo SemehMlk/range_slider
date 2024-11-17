@@ -1,27 +1,30 @@
-package com.example.preferences.mapper;
+package com.example.preferences.converter;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.mapstruct.Named;
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
 
-@Named("JsonNodeMapper")
-public class JsonNodeMapper {
+@Converter(autoApply = true)
+public class JsonNodeAttributeConverter implements AttributeConverter<JsonNode, String> {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Named("toJsonNode")
-    public JsonNode toJsonNode(Object value) {
-        if (value == null) {
-            return null;
+    @Override
+    public String convertToDatabaseColumn(JsonNode attribute) {
+        try {
+            return attribute == null ? null : objectMapper.writeValueAsString(attribute);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error converting JsonNode to String: " + e.getMessage(), e);
         }
-        return objectMapper.convertValue(value, JsonNode.class);
     }
 
-    @Named("toObject")
-    public Object toObject(JsonNode jsonNode) {
-        if (jsonNode == null) {
-            return null;
+    @Override
+    public JsonNode convertToEntityAttribute(String dbData) {
+        try {
+            return dbData == null ? null : objectMapper.readTree(dbData);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Error converting String to JsonNode: " + e.getMessage(), e);
         }
-        return objectMapper.convertValue(jsonNode, Object.class);
     }
 }
