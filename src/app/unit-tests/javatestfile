@@ -1,99 +1,28 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+package com.example.preferences.mapper;
 
-    <!-- ChangeSet to create the sequence -->
-    <changeSet id="1-create-sequence-user-preferences" author="yourname">
-        <createSequence 
-            sequenceName="user_preferences_id_seq" 
-            startValue="1" 
-            incrementBy="1" />
-    </changeSet>
-
-    <!-- ChangeSet to create the table -->
-    <changeSet id="2-create-table-user-preferences" author="yourname">
-        <createTable tableName="user_preferences">
-            <column name="id" type="BIGINT">
-                <constraints primaryKey="true" nullable="false" />
-            </column>
-            <column name="usercode" type="VARCHAR(255)">
-                <constraints nullable="false" />
-            </column>
-            <column name="uicontext" type="VARCHAR(255)">
-                <constraints nullable="false" />
-            </column>
-            <column name="uiconfig" type="JSONB" />
-        </createTable>
-    </changeSet>
-
-    <!-- ChangeSet to add the default value for id from the sequence -->
-    <changeSet id="3-add-default-id-sequence" author="yourname">
-        <addDefaultValue 
-            columnName="id" 
-            tableName="user_preferences" 
-            defaultValueComputed="nextval('user_preferences_id_seq')" />
-    </changeSet>
-
-</databaseChangeLog>
-
-
-
-
-package com.example.preferences.entity;
-
-import jakarta.persistence.*;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.mapstruct.Mapper;
+import org.mapstruct.Named;
 
-@Entity
-@Table(name = "user_preferences")
-public class UserPreference {
+@Named("JsonNodeMapper")
+public class JsonNodeMapper {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Column(nullable = false)
-    private String usercode;
-
-    @Column(nullable = false)
-    private String uicontext;
-
-    @Column(columnDefinition = "jsonb")
-    private JsonNode uiconfig;
-
-    // Getters and Setters
-    public Long getId() {
-        return id;
+    @Named("toJsonNode")
+    public JsonNode toJsonNode(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return objectMapper.convertValue(value, JsonNode.class);
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getUsercode() {
-        return usercode;
-    }
-
-    public void setUsercode(String usercode) {
-        this.usercode = usercode;
-    }
-
-    public String getUicontext() {
-        return uicontext;
-    }
-
-    public void setUicontext(String uicontext) {
-        this.uicontext = uicontext;
-    }
-
-    public JsonNode getUiconfig() {
-        return uiconfig;
-    }
-
-    public void setUiconfig(JsonNode uiconfig) {
-        this.uiconfig = uiconfig;
+    @Named("toObject")
+    public Object toObject(JsonNode jsonNode) {
+        if (jsonNode == null) {
+            return null;
+        }
+        return objectMapper.convertValue(jsonNode, Object.class);
     }
 }
