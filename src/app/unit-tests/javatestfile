@@ -1,31 +1,24 @@
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.AttributeConverter;
-import jakarta.persistence.Converter;
+import org.mapstruct.*;
+import com.example.model.UserPreferenceDto; // Importez le DTO généré par OpenAPI
 
-import java.io.IOException;
-import java.util.Map;
+@Mapper(componentModel = "spring")
+public interface UserPreferenceMapper {
 
-@Converter(autoApply = true)
-public class JsonConverter implements AttributeConverter<Map<String, Object>, String> {
+    @Mapping(target = "configs", expression = "java(convertConfigsToString(dto.getConfigs()))")
+    UserPreferenceEntity toEntity(UserPreferenceDto dto);
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    @Mapping(target = "configs", expression = "java(convertStringToConfigs(entity.getConfigs()))")
+    UserPreferenceDto toDto(UserPreferenceEntity entity);
 
-    @Override
-    public String convertToDatabaseColumn(Map<String, Object> attribute) {
-        try {
-            return objectMapper.writeValueAsString(attribute);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error converting map to JSON", e);
-        }
+    @Named("convertConfigsToString")
+    default String convertConfigsToString(Object configs) {
+        // Utilisez Jackson ou Gson pour convertir l'objet en JSON
+        return new ObjectMapper().writeValueAsString(configs);
     }
 
-    @Override
-    public Map<String, Object> convertToEntityAttribute(String dbData) {
-        try {
-            return objectMapper.readValue(dbData, Map.class);
-        } catch (IOException e) {
-            throw new RuntimeException("Error converting JSON to map", e);
-        }
+    @Named("convertStringToConfigs")
+    default Object convertStringToConfigs(String configs) {
+        // Utilisez Jackson ou Gson pour convertir le JSON en objet
+        return new ObjectMapper().readValue(configs, Object.class);
     }
 }
