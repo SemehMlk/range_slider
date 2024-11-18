@@ -1,31 +1,46 @@
 import org.mapstruct.*;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.example.model.UserPreferenceDto; // Le DTO généré par OpenAPI
+import com.example.model.UserPreferenceDto;
 import com.example.entity.UserPreferenceEntity;
 
-@Mapper(componentModel = "spring", uses = ObjectMapper.class)
+@Mapper(componentModel = "spring", uses = {JsonObjectMapper.class})
 public interface UserPreferenceMapper {
 
-    @Mapping(target = "configs", expression = "java(convertConfigsToString(dto.getConfigs()))")
-    UserPreferenceEntity toEntity(UserPreferenceDto dto) throws JsonProcessingException;
+    @Mapping(target = "configs", source = "configs", qualifiedByName = "objectToJson")
+    UserPreferenceEntity toEntity(UserPreferenceDto dto);
 
-    @Mapping(target = "configs", expression = "java(convertStringToConfigs(entity.getConfigs()))")
-    UserPreferenceDto toDto(UserPreferenceEntity entity) throws JsonProcessingException;
+    @Mapping(target = "configs", source = "configs", qualifiedByName = "jsonToObject")
+    UserPreferenceDto toDto(UserPreferenceEntity entity);
+}
 
-    @Named("convertConfigsToString")
-    default String convertConfigsToString(Object configs) throws JsonProcessingException {
-        if (configs == null) {
-            return null;
-        }
-        return new ObjectMapper().writeValueAsString(configs);
+import org.mapstruct.Named;
+import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@Component
+public class JsonObjectMapper {
+
+    private final ObjectMapper objectMapper;
+
+    public JsonObjectMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 
-    @Named("convertStringToConfigs")
-    default Object convertStringToConfigs(String configs) throws JsonProcessingException {
-        if (configs == null) {
-            return null;
+    @Named("objectToJson")
+    public String objectToJson(Object object) {
+        try {
+            return object != null ? objectMapper.writeValueAsString(object) : null;
+        } catch (Exception e) {
+            throw new RuntimeException("Error converting object to JSON", e);
         }
-        return new ObjectMapper().readValue(configs, Object.class);
+    }
+
+    @Named("jsonToObject")
+    public Object jsonToObject(String json) {
+        try {
+            return json != null ? objectMapper.readValue(json, Object.class) : null;
+        } catch (Exception e) {
+            throw new RuntimeException("Error converting JSON to object", e);
+        }
     }
 }
