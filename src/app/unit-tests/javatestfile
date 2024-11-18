@@ -1,46 +1,37 @@
-import org.mapstruct.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.example.model.UserPreferenceDto;
-import com.example.entity.UserPreferenceEntity;
+    <!-- Ajout de la contrainte d'unicité -->
+    <changeSet id="2-add-unique-constraint-usercode-uicontext" author="yourname">
+        <addUniqueConstraint
+            columnNames="usercode,uicontext"
+            constraintName="uk_usercode_uicontext"
+            tableName="user_preferences"/>
+    </changeSet>
 
-@Mapper(componentModel = "spring", uses = {JsonObjectMapper.class})
-public interface UserPreferenceMapper {
 
-    @Mapping(target = "configs", source = "configs", qualifiedByName = "objectToJson")
-    UserPreferenceEntity toEntity(UserPreferenceDto dto);
 
-    @Mapping(target = "configs", source = "configs", qualifiedByName = "jsonToObject")
-    UserPreferenceDto toDto(UserPreferenceEntity entity);
-}
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateEntityFromDto(UserPreferenceDTO dto, @MappingTarget UserPreference entity);
 
-import org.mapstruct.Named;
-import org.springframework.stereotype.Component;
-import com.fasterxml.jackson.databind.ObjectMapper;
+@Table(name = "user_preferences", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"usercode", "uicontext"})
+})
 
-@Component
-public class JsonObjectMapper {
 
-    private final ObjectMapper objectMapper;
-
-    public JsonObjectMapper(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
-    }
-
-    @Named("objectToJson")
-    public String objectToJson(Object object) {
+  public UserPreference saveOrUpdate(UserPreferenceDTO preferenceDTO) {
         try {
-            return object != null ? objectMapper.writeValueAsString(object) : null;
-        } catch (Exception e) {
-            throw new RuntimeException("Error converting object to JSON", e);
+            if (preferenceDTO.getId() != null) {
+                Optional<UserPreference> existing = repository.findById(preferenceDTO.getId());
+                if (existing.isPresent()) {
+                    UserPreference entity = existing.get();
+                    mapper.updateEntityFromDto(preferenceDTO, entity);
+                    return repository.save(entity);
+                } else {
+                    throw new IllegalArgumentException("No UserPreference found with ID: " + preferenceDTO.getId());
+                }
+            }
+            UserPreference newEntity = mapper.toEntity(preferenceDTO);
+            return repository.save(newEntity);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Duplicate entry for usercode and uicontext: "
+                    + preferenceDTO.getUsercode() + ", " + preferenceDTO.getUicontext(), e);
         }
     }
-
-    @Named("jsonToObject")
-    public Object jsonToObject(String json) {
-        try {
-            return json != null ? objectMapper.readValue(json, Object.class) : null;
-        } catch (Exception e) {
-            throw new RuntimeException("Error converting JSON to object", e);
-        }
-    }
-}
