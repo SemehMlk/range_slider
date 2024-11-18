@@ -1,24 +1,31 @@
 import org.mapstruct.*;
-import com.example.model.UserPreferenceDto; // Importez le DTO généré par OpenAPI
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.model.UserPreferenceDto; // Le DTO généré par OpenAPI
+import com.example.entity.UserPreferenceEntity;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = ObjectMapper.class)
 public interface UserPreferenceMapper {
 
     @Mapping(target = "configs", expression = "java(convertConfigsToString(dto.getConfigs()))")
-    UserPreferenceEntity toEntity(UserPreferenceDto dto);
+    UserPreferenceEntity toEntity(UserPreferenceDto dto) throws JsonProcessingException;
 
     @Mapping(target = "configs", expression = "java(convertStringToConfigs(entity.getConfigs()))")
-    UserPreferenceDto toDto(UserPreferenceEntity entity);
+    UserPreferenceDto toDto(UserPreferenceEntity entity) throws JsonProcessingException;
 
     @Named("convertConfigsToString")
-    default String convertConfigsToString(Object configs) {
-        // Utilisez Jackson ou Gson pour convertir l'objet en JSON
+    default String convertConfigsToString(Object configs) throws JsonProcessingException {
+        if (configs == null) {
+            return null;
+        }
         return new ObjectMapper().writeValueAsString(configs);
     }
 
     @Named("convertStringToConfigs")
-    default Object convertStringToConfigs(String configs) {
-        // Utilisez Jackson ou Gson pour convertir le JSON en objet
+    default Object convertStringToConfigs(String configs) throws JsonProcessingException {
+        if (configs == null) {
+            return null;
+        }
         return new ObjectMapper().readValue(configs, Object.class);
     }
 }
