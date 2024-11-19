@@ -1,70 +1,159 @@
-package com.cacib.t2s.kemm.common.repository.jpa.preferences;
+package com.cacib.t2s.kemm.api.service;
 
+import com.cacib.t2s.kemm.api.mappers.UserPreferenceMapper;
+import com.cacib.t2s.kemm.common.repository.jpa.preferences.UserPreferenceRepository;
 import com.cacib.t2s.kemm.domain.enums.KemmUIContext;
 import com.cacib.t2s.kemm.domain.jpa.preferences.UserPreference;
+import com.cacib.t2s.kemm.model.UserPreferenceDto;
+import com.cacib.t2s.kemm.utils.exceptions.InvalidRequestException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.transaction.annotation.Transactional;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.http.ResponseEntity;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-@DataJpaTest
-@Transactional
-class UserPreferenceRepositoryTest {
+class UserPreferencesServiceTest {
 
-    @Autowired
+    @Mock
     private UserPreferenceRepository userPreferenceRepository;
 
-    @Test
-    void testFindByUtCode() {
-        // Arrange: Ajouter des données dans la base de données en mémoire
-        UserPreference preference1 = new UserPreference();
-        preference1.setUtCode("TEST_CODE_1");
-        preference1.setUiContext(KemmUIContext.CONTEXT_1);
-        preference1.setConfig("{\"key\":\"value1\"}");
-        userPreferenceRepository.save(preference1);
+    @Mock
+    private UserPreferenceMapper userPreferenceMapper;
 
-        UserPreference preference2 = new UserPreference();
-        preference2.setUtCode("TEST_CODE_1");
-        preference2.setUiContext(KemmUIContext.CONTEXT_2);
-        preference2.setConfig("{\"key\":\"value2\"}");
-        userPreferenceRepository.save(preference2);
+    @InjectMocks
+    private UserPreferencesService userPreferencesService;
 
-        UserPreference preference3 = new UserPreference();
-        preference3.setUtCode("TEST_CODE_2");
-        preference3.setUiContext(KemmUIContext.CONTEXT_3);
-        preference3.setConfig("{\"key\":\"value3\"}");
-        userPreferenceRepository.save(preference3);
-
-        // Act: Rechercher par `utCode`
-        List<UserPreference> results = userPreferenceRepository.findByUtCode("TEST_CODE_1");
-
-        // Assert: Vérifiez que les résultats correspondent
-        assertNotNull(results);
-        assertEquals(2, results.size());
-        assertTrue(results.stream().allMatch(p -> "TEST_CODE_1".equals(p.getUtCode())));
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
     }
 
     @Test
-    void testFindByUtCodeAndUiContext() {
-        // Arrange: Ajouter des données dans la base de données en mémoire
-        UserPreference preference = new UserPreference();
-        preference.setUtCode("TEST_CODE_3");
-        preference.setUiContext(KemmUIContext.CONTEXT_3);
-        preference.setConfig("{\"key\":\"value3\"}");
-        userPreferenceRepository.save(preference);
+    void testUpdateConfigsSuccess() {
+        // Arrange
+        UserPreferenceDto dto = new UserPreferenceDto();
+        dto.setId(1L);
+        dto.setUtCode("TEST_CODE");
+        dto.setUiContext("TEST_CONTEXT");
 
-        // Act: Rechercher par `utCode` et `uiContext`
-        Optional<UserPreference> result = userPreferenceRepository.findByUtCodeAndUiContext("TEST_CODE_3", KemmUIContext.CONTEXT_3);
+        UserPreference entity = new UserPreference();
+        entity.setId(1L);
+        entity.setUtCode("TEST_CODE");
 
-        // Assert: Vérifiez que le résultat est correct
-        assertTrue(result.isPresent());
-        assertEquals("TEST_CODE_3", result.get().getUtCode());
-        assertEquals(KemmUIContext.CONTEXT_3, result.get().getUiContext());
-        assertEquals("{\"key\":\"value3\"}", result.get().getConfig());
+        when(userPreferenceRepository.findById(dto.getId())).thenReturn(Optional.of(entity));
+        when(userPreferenceMapper.toEntity(dto)).thenReturn(entity);
+        when(userPreferenceRepository.save(entity)).thenReturn(entity);
+        when(userPreferenceMapper.toDto(entity)).thenReturn(dto);
+
+        // Act
+        ResponseEntity<UserPreferenceDto> response = userPreferencesService.updateConfigs(dto);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(dto, response.getBody());
+        verify(userPreferenceRepository, times(1)).findById(dto.getId());
+        verify(userPreferenceRepository, times(1)).save(entity);
+        verify(userPreferenceMapper, times(1)).toDto(entity);
+    }
+
+    @Test
+    void testUpdateConfigsNotFound() {
+        // Arrange
+        UserPreferenceDto dto = new UserPreferenceDto();
+        dto.setId(1L);
+
+        when(userPreferenceRepository.findById(dto.getId())).thenReturn(Optional.empty());
+
+        // Act & Assert
+        InvalidRequestException exception = assertThrows(InvalidRequestException.class, () -> {
+            userPreferencesService.updateConfigs(dto);
+        });
+
+        assertNotNull(exception);
+        verify(userPreferenceRepository, times(1)).findById(dto.getId());
+        verify(userPreferenceRepository, never()).save(any());
+        verify(userPreferenceMapper, never()).toDto(any());
+    }
+
+    @Test
+    void testGetUserPreferencesSuccess() {
+        // Arrange
+        String utCode = "utXXX";
+        List<UserPreference> entities = new ArrayList<>();
+        UserPreference entity1 = new UserPreference();
+        entity1.setUtCode(utCode);
+        entities.add(entity1);
+
+        UserPreferenceDto dto1 = new UserPreferenceDto();
+        dto1.setUtCode(utCode);
+
+        when(userPreferenceRepository.findByUtCode(utCode)).thenReturn(entities);
+        when(userPreferenceMapper.toDto(entity1)).thenReturn(dto1);
+
+        // Act
+        ResponseEntity<List<UserPreferenceDto>> response = userPreferencesService.getUserPreferences();
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(1, response.getBody().size());
+        assertEquals(dto1, response.getBody().get(0));
+        verify(userPreferenceRepository, times(1)).findByUtCode(utCode);
+        verify(userPreferenceMapper, times(1)).toDto(entity1);
+    }
+
+    @Test
+    void testGetPreferenceByUiContextSuccess() {
+        // Arrange
+        String uiContext = "TEST_CONTEXT";
+        String utCode = "utXXX";
+
+        UserPreference entity = new UserPreference();
+        entity.setUtCode(utCode);
+        entity.setUiContext(KemmUIContext.valueOf(uiContext));
+
+        UserPreferenceDto dto = new UserPreferenceDto();
+        dto.setUtCode(utCode);
+        dto.setUiContext(uiContext);
+
+        when(userPreferenceRepository.findByUtCodeAndUiContext(utCode, KemmUIContext.valueOf(uiContext)))
+                .thenReturn(Optional.of(entity));
+        when(userPreferenceMapper.toDto(entity)).thenReturn(dto);
+
+        // Act
+        ResponseEntity<UserPreferenceDto> response = userPreferencesService.getPreferenceByUiContext(uiContext);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(dto, response.getBody());
+        verify(userPreferenceRepository, times(1))
+                .findByUtCodeAndUiContext(utCode, KemmUIContext.valueOf(uiContext));
+        verify(userPreferenceMapper, times(1)).toDto(entity);
+    }
+
+    @Test
+    void testGetPreferenceByUiContextNotFound() {
+        // Arrange
+        String uiContext = "TEST_CONTEXT";
+        String utCode = "utXXX";
+
+        when(userPreferenceRepository.findByUtCodeAndUiContext(utCode, KemmUIContext.valueOf(uiContext)))
+                .thenReturn(Optional.empty());
+
+        // Act
+        ResponseEntity<UserPreferenceDto> response = userPreferencesService.getPreferenceByUiContext(uiContext);
+
+        // Assert
+        assertNull(response.getBody());
+        verify(userPreferenceRepository, times(1))
+                .findByUtCodeAndUiContext(utCode, KemmUIContext.valueOf(uiContext));
+        verify(userPreferenceMapper, never()).toDto(any());
     }
 }
