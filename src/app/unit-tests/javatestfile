@@ -6,21 +6,28 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.lang.reflect.Field;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class UserPreferenceMapperTest {
 
     private JsonObjectMapper jsonObjectMapper;
-    private UserPreferenceMapper userPreferenceMapper;
+    private UserPreferenceMapperImpl userPreferenceMapper;
 
     @BeforeEach
-    void setUp() {
-        // Mock du JsonObjectMapper
+    void setUp() throws Exception {
+        // Mock de JsonObjectMapper
         jsonObjectMapper = Mockito.mock(JsonObjectMapper.class);
 
-        // Création manuelle de l'implémentation générée par MapStruct
-        userPreferenceMapper = new UserPreferenceMapperImpl(jsonObjectMapper);
+        // Instanciation manuelle de la classe générée par MapStruct
+        userPreferenceMapper = new UserPreferenceMapperImpl();
+
+        // Injection manuelle de JsonObjectMapper via Reflection (car il est annoté avec @Autowired)
+        Field jsonObjectMapperField = UserPreferenceMapperImpl.class.getDeclaredField("jsonObjectMapper");
+        jsonObjectMapperField.setAccessible(true);
+        jsonObjectMapperField.set(userPreferenceMapper, jsonObjectMapper);
     }
 
     @Test
