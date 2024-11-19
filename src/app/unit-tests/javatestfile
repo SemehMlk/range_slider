@@ -1,37 +1,106 @@
-    <!-- Ajout de la contrainte d'unicité -->
-    <changeSet id="2-add-unique-constraint-usercode-uicontext" author="yourname">
-        <addUniqueConstraint
-            columnNames="usercode,uicontext"
-            constraintName="uk_usercode_uicontext"
-            tableName="user_preferences"/>
-    </changeSet>
+package com.cacib.t2s.kemm.api.mappers;
 
+import com.cacib.t2s.kemm.utils.exceptions.KemmRuntimeException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateEntityFromDto(UserPreferenceDTO dto, @MappingTarget UserPreference entity);
+class JsonObjectMapperTest {
 
-@Table(name = "user_preferences", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"usercode", "uicontext"})
-})
+    @Mock
+    private ObjectMapper objectMapper;
 
+    @InjectMocks
+    private JsonObjectMapper jsonObjectMapper;
 
-  public UserPreference saveOrUpdate(UserPreferenceDTO preferenceDTO) {
-        try {
-            if (preferenceDTO.getId() != null) {
-                Optional<UserPreference> existing = repository.findById(preferenceDTO.getId());
-                if (existing.isPresent()) {
-                    UserPreference entity = existing.get();
-                    mapper.updateEntityFromDto(preferenceDTO, entity);
-                    return repository.save(entity);
-                } else {
-                    throw new IllegalArgumentException("No UserPreference found with ID: " + preferenceDTO.getId());
-                }
-            }
-            UserPreference newEntity = mapper.toEntity(preferenceDTO);
-            return repository.save(newEntity);
-        } catch (DataIntegrityViolationException e) {
-            throw new IllegalArgumentException("Duplicate entry for usercode and uicontext: "
-                    + preferenceDTO.getUsercode() + ", " + preferenceDTO.getUicontext(), e);
-        }
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
     }
+
+    @Test
+    void testObjectToJsonSuccess() throws Exception {
+        // Arrange
+        Object object = new Object();
+        String jsonString = "{\"key\":\"value\"}";
+        when(objectMapper.writeValueAsString(object)).thenReturn(jsonString);
+
+        // Act
+        String result = jsonObjectMapper.objectToJson(object);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(jsonString, result);
+        verify(objectMapper, times(1)).writeValueAsString(object);
+    }
+
+    @Test
+    void testObjectToJsonWithNullObject() {
+        // Act
+        String result = jsonObjectMapper.objectToJson(null);
+
+        // Assert
+        assertNull(result);
+        verifyNoInteractions(objectMapper);
+    }
+
+    @Test
+    void testObjectToJsonThrowsException() throws Exception {
+        // Arrange
+        Object object = new Object();
+        when(objectMapper.writeValueAsString(object)).thenThrow(new RuntimeException("Serialization error"));
+
+        // Act & Assert
+        KemmRuntimeException exception = assertThrows(KemmRuntimeException.class, () -> {
+            jsonObjectMapper.objectToJson(object);
+        });
+        assertNotNull(exception);
+        verify(objectMapper, times(1)).writeValueAsString(object);
+    }
+
+    @Test
+    void testJsonToObjectSuccess() throws Exception {
+        // Arrange
+        String json = "{\"key\":\"value\"}";
+        Object object = new Object();
+        when(objectMapper.readValue(json, Object.class)).thenReturn(object);
+
+        // Act
+        Object result = jsonObjectMapper.jsonToObject(json);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(object, result);
+        verify(objectMapper, times(1)).readValue(json, Object.class);
+    }
+
+    @Test
+    void testJsonToObjectWithNullJson() {
+        // Act
+        Object result = jsonObjectMapper.jsonToObject(null);
+
+        // Assert
+        assertNull(result);
+        verifyNoInteractions(objectMapper);
+    }
+
+    @Test
+    void testJsonToObjectThrowsException() throws Exception {
+        // Arrange
+        String json = "{\"key\":\"value\"}";
+        when(objectMapper.readValue(json, Object.class)).thenThrow(new RuntimeException("Deserialization error"));
+
+        // Act & Assert
+        KemmRuntimeException exception = assertThrows(KemmRuntimeException.class, () -> {
+            jsonObjectMapper.jsonToObject(json);
+        });
+        assertNotNull(exception);
+        verify(objectMapper, times(1)).readValue(json, Object.class);
+    }
+}
