@@ -1,74 +1,72 @@
-package com.cacib.t2s.kemm.api.mappers;
-
-import com.cacib.t2s.kemm.domain.jpa.preferences.UserPreference;
-import com.cacib.t2s.kemm.model.UserPreferenceDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.model.UserPreferenceDto;
+import com.example.entity.UserPreferenceEntity;
+import com.example.mapper.UserPreferenceMapper;
+import com.example.mapper.JsonObjectMapper;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class UserPreferenceMapperTest {
 
-    @Mock
+    private UserPreferenceMapper mapper;
     private JsonObjectMapper jsonObjectMapper;
-
-    private UserPreferenceMapper userPreferenceMapper;
 
     @BeforeEach
     void setUp() {
-        MockitoAnnotations.openMocks(this);
-
-        // Utiliser une implémentation concrète générée par MapStruct
-        userPreferenceMapper = Mappers.getMapper(UserPreferenceMapper.class);
-
-        // Injecter manuellement JsonObjectMapper
-        ((UserPreferenceMapperImpl) userPreferenceMapper).setJsonObjectMapper(jsonObjectMapper);
+        jsonObjectMapper = new JsonObjectMapper(new ObjectMapper());
+        mapper = Mappers.getMapper(UserPreferenceMapper.class);
     }
 
     @Test
-    void testToEntitySuccess() {
-        // Arrange
+    void testToEntity() {
         UserPreferenceDto dto = new UserPreferenceDto();
-        dto.setUtCode("testCode");
-        dto.setUiContext("TEST_CONTEXT");
-        dto.setConfig(new Object()); // Config est un objet dans le DTO
+        dto.setId(1L);
+        dto.setUtcode("TEST001");
+        dto.setUicontext("CONTEXT1");
+        dto.setConfigs(Map.of("key1", "value1", "key2", 2));
 
-        when(jsonObjectMapper.objectToJson(dto.getConfig())).thenReturn("{\"key\":\"value\"}");
+        UserPreferenceEntity entity = mapper.toEntity(dto);
 
-        // Act
-        UserPreference result = userPreferenceMapper.toEntity(dto);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals("testCode", result.getUtCode());
-        assertEquals("TEST_CONTEXT", result.getUiContext());
-        assertEquals("{\"key\":\"value\"}", result.getConfig());
-        verify(jsonObjectMapper, times(1)).objectToJson(dto.getConfig());
+        assertNotNull(entity);
+        assertEquals(dto.getId(), entity.getId());
+        assertEquals(dto.getUtcode(), entity.getUtcode());
+        assertEquals(dto.getUicontext(), entity.getUicontext());
+        assertTrue(entity.getConfigs().contains("key1"));
+        assertTrue(entity.getConfigs().contains("value1"));
     }
 
     @Test
-    void testToDtoSuccess() {
-        // Arrange
-        UserPreference entity = new UserPreference();
-        entity.setUtCode("testCode");
-        entity.setUiContext("TEST_CONTEXT");
-        entity.setConfig("{\"key\":\"value\"}"); // Config est une chaîne JSON dans l'entité
+    void testToDto() {
+        UserPreferenceEntity entity = new UserPreferenceEntity();
+        entity.setId(1L);
+        entity.setUtcode("TEST001");
+        entity.setUicontext("CONTEXT1");
+        entity.setConfigs("{\"key1\":\"value1\",\"key2\":2}");
 
-        Object expectedConfigObject = new Object();
-        when(jsonObjectMapper.jsonToObject(entity.getConfig())).thenReturn(expectedConfigObject);
+        UserPreferenceDto dto = mapper.toDto(entity);
 
-        // Act
-        UserPreferenceDto result = userPreferenceMapper.toDto(entity);
+        assertNotNull(dto);
+        assertEquals(entity.getId(), dto.getId());
+        assertEquals(entity.getUtcode(), dto.getUtcode());
+        assertEquals(entity.getUicontext(), dto.getUicontext());
+        assertNotNull(dto.getConfigs());
+        assertEquals("value1", ((Map)dto.getConfigs()).get("key1"));
+        assertEquals(2, ((Map)dto.getConfigs()).get("key2"));
+    }
 
-        // Assert
-        assertNotNull(result);
-        assertEquals("testCode", result.getUtCode());
-        assertEquals("TEST_CONTEXT", result.getUiContext());
-        assertEquals(expectedConfigObject, result.getConfig());
-        verify(jsonObjectMapper, times(1)).jsonToObject(entity.getConfig());
+    @Test
+    void testNullValues() {
+        UserPreferenceDto dto = new UserPreferenceDto();
+        UserPreferenceEntity entity = mapper.toEntity(dto);
+
+        assertNotNull(entity);
+        assertNull(entity.getConfigs());
+
+        UserPreferenceDto convertedDto = mapper.toDto(entity);
+        assertNotNull(convertedDto);
+        assertNull(convertedDto.getConfigs());
     }
 }
