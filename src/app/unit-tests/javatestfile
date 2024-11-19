@@ -1,24 +1,28 @@
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.example.model.UserPreferenceDto;
 import com.example.entity.UserPreferenceEntity;
 import com.example.mapper.UserPreferenceMapper;
 import com.example.mapper.JsonObjectMapper;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 
+@SpringBootTest
+@Import(JsonObjectMapper.class)
 class UserPreferenceMapperTest {
 
+    @Autowired
     private UserPreferenceMapper mapper;
-    private JsonObjectMapper jsonObjectMapper;
 
-    @BeforeEach
-    void setUp() {
-        jsonObjectMapper = new JsonObjectMapper(new ObjectMapper());
-        mapper = Mappers.getMapper(UserPreferenceMapper.class);
-    }
+    @Autowired
+    private JsonObjectMapper jsonObjectMapper;
 
     @Test
     void testToEntity() {
