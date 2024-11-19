@@ -1,9 +1,10 @@
 package com.cacib.t2s.kemm.api.mappers;
 
-import com.cacib.t2s.kemm.utils.exceptions.KemmRuntimeException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cacib.t2s.kemm.domain.jpa.preferences.UserPreference;
+import com.cacib.t2s.kemm.model.UserPreferenceDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -11,96 +12,36 @@ import org.mockito.MockitoAnnotations;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-class JsonObjectMapperTest {
+class UserPreferenceMapperTest {
 
     @Mock
-    private ObjectMapper objectMapper;
-
-    @InjectMocks
     private JsonObjectMapper jsonObjectMapper;
+
+    private UserPreferenceMapper userPreferenceMapper;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        // Utilise l'implémentation générée de MapStruct
+        userPreferenceMapper = Mappers.getMapper(UserPreferenceMapper.class);
     }
 
     @Test
-    void testObjectToJsonSuccess() throws Exception {
+    void testToEntitySuccess() {
         // Arrange
-        Object object = new Object();
-        String jsonString = "{\"key\":\"value\"}";
-        when(objectMapper.writeValueAsString(object)).thenReturn(jsonString);
+        UserPreferenceDto dto = new UserPreferenceDto();
+        dto.setConfig("{\"key\":\"value\"}");
+        UserPreference expectedEntity = new UserPreference();
+
+        when(jsonObjectMapper.jsonToObject(dto.getConfig())).thenReturn(new Object());
 
         // Act
-        String result = jsonObjectMapper.objectToJson(object);
+        UserPreference result = userPreferenceMapper.toEntity(dto);
 
         // Assert
         assertNotNull(result);
-        assertEquals(jsonString, result);
-        verify(objectMapper, times(1)).writeValueAsString(object);
+        assertEquals(dto.getConfig(), result.getConfig());
+        verify(jsonObjectMapper, times(1)).jsonToObject(dto.getConfig());
     }
 
-    @Test
-    void testObjectToJsonWithNullObject() {
-        // Act
-        String result = jsonObjectMapper.objectToJson(null);
-
-        // Assert
-        assertNull(result);
-        verifyNoInteractions(objectMapper);
-    }
-
-    @Test
-    void testObjectToJsonThrowsException() throws Exception {
-        // Arrange
-        Object object = new Object();
-        when(objectMapper.writeValueAsString(object)).thenThrow(new RuntimeException("Serialization error"));
-
-        // Act & Assert
-        KemmRuntimeException exception = assertThrows(KemmRuntimeException.class, () -> {
-            jsonObjectMapper.objectToJson(object);
-        });
-        assertNotNull(exception);
-        verify(objectMapper, times(1)).writeValueAsString(object);
-    }
-
-    @Test
-    void testJsonToObjectSuccess() throws Exception {
-        // Arrange
-        String json = "{\"key\":\"value\"}";
-        Object object = new Object();
-        when(objectMapper.readValue(json, Object.class)).thenReturn(object);
-
-        // Act
-        Object result = jsonObjectMapper.jsonToObject(json);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(object, result);
-        verify(objectMapper, times(1)).readValue(json, Object.class);
-    }
-
-    @Test
-    void testJsonToObjectWithNullJson() {
-        // Act
-        Object result = jsonObjectMapper.jsonToObject(null);
-
-        // Assert
-        assertNull(result);
-        verifyNoInteractions(objectMapper);
-    }
-
-    @Test
-    void testJsonToObjectThrowsException() throws Exception {
-        // Arrange
-        String json = "{\"key\":\"value\"}";
-        when(objectMapper.readValue(json, Object.class)).thenThrow(new RuntimeException("Deserialization error"));
-
-        // Act & Assert
-        KemmRuntimeException exception = assertThrows(KemmRuntimeException.class, () -> {
-            jsonObjectMapper.jsonToObject(json);
-        });
-        assertNotNull(exception);
-        verify(objectMapper, times(1)).readValue(json, Object.class);
-    }
 }
