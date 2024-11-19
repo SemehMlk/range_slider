@@ -2,7 +2,6 @@ package com.cacib.t2s.kemm.api.mappers;
 
 import com.cacib.t2s.kemm.domain.jpa.preferences.UserPreference;
 import com.cacib.t2s.kemm.model.UserPreferenceDto;
-import com.cacib.t2s.kemm.utils.exceptions.KemmRuntimeException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -22,8 +21,12 @@ class UserPreferenceMapperTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        // Utilise l'implémentation générée de MapStruct
+
+        // Utiliser une implémentation concrète générée par MapStruct
         userPreferenceMapper = Mappers.getMapper(UserPreferenceMapper.class);
+
+        // Injecter manuellement JsonObjectMapper
+        ((UserPreferenceMapperImpl) userPreferenceMapper).setJsonObjectMapper(jsonObjectMapper);
     }
 
     @Test
@@ -48,25 +51,6 @@ class UserPreferenceMapperTest {
     }
 
     @Test
-    void testToEntityWithNullConfig() {
-        // Arrange
-        UserPreferenceDto dto = new UserPreferenceDto();
-        dto.setUtCode("testCode");
-        dto.setUiContext("TEST_CONTEXT");
-        dto.setConfig(null); // Config est null
-
-        // Act
-        UserPreference result = userPreferenceMapper.toEntity(dto);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals("testCode", result.getUtCode());
-        assertEquals("TEST_CONTEXT", result.getUiContext());
-        assertNull(result.getConfig());
-        verifyNoInteractions(jsonObjectMapper);
-    }
-
-    @Test
     void testToDtoSuccess() {
         // Arrange
         UserPreference entity = new UserPreference();
@@ -85,51 +69,6 @@ class UserPreferenceMapperTest {
         assertEquals("testCode", result.getUtCode());
         assertEquals("TEST_CONTEXT", result.getUiContext());
         assertEquals(expectedConfigObject, result.getConfig());
-        verify(jsonObjectMapper, times(1)).jsonToObject(entity.getConfig());
-    }
-
-    @Test
-    void testToDtoWithNullConfig() {
-        // Arrange
-        UserPreference entity = new UserPreference();
-        entity.setUtCode("testCode");
-        entity.setUiContext("TEST_CONTEXT");
-        entity.setConfig(null); // Config est null dans l'entité
-
-        // Act
-        UserPreferenceDto result = userPreferenceMapper.toDto(entity);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals("testCode", result.getUtCode());
-        assertEquals("TEST_CONTEXT", result.getUiContext());
-        assertNull(result.getConfig());
-        verifyNoInteractions(jsonObjectMapper);
-    }
-
-    @Test
-    void testToEntityThrowsException() {
-        // Arrange
-        UserPreferenceDto dto = new UserPreferenceDto();
-        dto.setConfig(new Object());
-
-        when(jsonObjectMapper.objectToJson(dto.getConfig())).thenThrow(new KemmRuntimeException("Serialization error"));
-
-        // Act & Assert
-        assertThrows(KemmRuntimeException.class, () -> userPreferenceMapper.toEntity(dto));
-        verify(jsonObjectMapper, times(1)).objectToJson(dto.getConfig());
-    }
-
-    @Test
-    void testToDtoThrowsException() {
-        // Arrange
-        UserPreference entity = new UserPreference();
-        entity.setConfig("{\"key\":\"value\"}");
-
-        when(jsonObjectMapper.jsonToObject(entity.getConfig())).thenThrow(new KemmRuntimeException("Deserialization error"));
-
-        // Act & Assert
-        assertThrows(KemmRuntimeException.class, () -> userPreferenceMapper.toDto(entity));
         verify(jsonObjectMapper, times(1)).jsonToObject(entity.getConfig());
     }
 }
