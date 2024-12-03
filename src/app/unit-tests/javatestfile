@@ -1,41 +1,19 @@
-class TemplateServiceTest {
+@Test
+void testCreateTemplate_Success() {
+    // Préparation des données
+    Template template = new Template();
+    FLxTemplate flxTemplate = new FLxTemplate();
 
-    @Mock
-    private TemplateRepository templateRepository;
+    // Configuration des mocks
+    when(templateMapper.toTemplate(template)).thenReturn(flxTemplate);
+    when(templateRepository.save(flxTemplate)).thenReturn(flxTemplate);
+    when(templateMapper.toTemplateDto(flxTemplate)).thenReturn(template);
 
-    @Mock
-    private TemplateMapper templateMapper; // Mock de l'interface au lieu de la classe `final`
+    // Exécution de la méthode à tester
+    ResponseEntity<Template> response = templateService.createTemplate(template);
 
-    @InjectMocks
-    private TemplateService templateService;
-
-    private AutoCloseable mocks;
-
-    @BeforeEach
-    void setup() {
-        mocks = MockitoAnnotations.openMocks(this);
-    }
-
-    @AfterEach
-    void tearDown() throws Exception {
-        mocks.close();
-    }
-
-    @Test
-    void testCreateTemplate_Success() {
-        Template template = new Template();
-        FLxTemplate flxTemplate = new FLxTemplate();
-
-        when(templateMapper.toTemplate(any(Template.class))).thenReturn(flxTemplate);
-        when(templateRepository.save(flxTemplate)).thenReturn(flxTemplate);
-        when(templateMapper.toTemplateDto(flxTemplate)).thenReturn(template);
-
-        ResponseEntity<Template> response = templateService.createTemplate(template);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(template, response.getBody());
-        verify(templateRepository).save(flxTemplate);
-    }
-
-    // Les autres tests restent identiques
+    // Vérifications
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertEquals(template, response.getBody());
+    verify(templateRepository).save(flxTemplate);
 }
