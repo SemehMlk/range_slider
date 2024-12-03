@@ -1,19 +1,56 @@
-@Test
-void testCreateTemplate_Success() {
-    // Préparation des données
-    Template template = new Template();
-    FLxTemplate flxTemplate = new FLxTemplate();
+class TemplateServiceTest {
 
-    // Configuration des mocks
-    when(templateMapper.toTemplate(template)).thenReturn(flxTemplate);
-    when(templateRepository.save(flxTemplate)).thenReturn(flxTemplate);
-    when(templateMapper.toTemplateDto(flxTemplate)).thenReturn(template);
+    @Mock
+    private TemplateRepository templateRepository;
 
-    // Exécution de la méthode à tester
-    ResponseEntity<Template> response = templateService.createTemplate(template);
+    @Mock
+    private TemplateMapper templateMapper;
 
-    // Vérifications
-    assertEquals(HttpStatus.OK, response.getStatusCode());
-    assertEquals(template, response.getBody());
-    verify(templateRepository).save(flxTemplate);
+    @InjectMocks
+    private TemplateService templateService;
+
+    private AutoCloseable mocks;
+
+    @BeforeEach
+    void setup() {
+        mocks = MockitoAnnotations.openMocks(this);
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        mocks.close();
+    }
+
+    @Test
+    void testCreateTemplate_Success() {
+        // Préparation des données
+        Template inputTemplate = new Template();
+        inputTemplate.setId(1L);
+        inputTemplate.setName("Test Template");
+
+        FLxTemplate savedEntity = new FLxTemplate();
+        savedEntity.setId(1L);
+        savedEntity.setName("Test Template");
+
+        Template outputTemplate = new Template();
+        outputTemplate.setId(1L);
+        outputTemplate.setName("Test Template");
+
+        // Configuration des mocks
+        when(templateMapper.toTemplate(inputTemplate)).thenReturn(savedEntity);
+        when(templateRepository.save(savedEntity)).thenReturn(savedEntity);
+        when(templateMapper.toTemplateDto(savedEntity)).thenReturn(outputTemplate);
+
+        // Exécution
+        ResponseEntity<Template> response = templateService.createTemplate(inputTemplate);
+
+        // Vérifications
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals("Test Template", response.getBody().getName());
+
+        verify(templateMapper).toTemplate(inputTemplate);
+        verify(templateRepository).save(savedEntity);
+        verify(templateMapper).toTemplateDto(savedEntity);
+    }
 }
