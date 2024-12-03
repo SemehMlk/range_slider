@@ -1,159 +1,104 @@
-package com.cacib.t2s.kemm.api.service;
-
-import com.cacib.t2s.kemm.api.mappers.UserPreferenceMapper;
-import com.cacib.t2s.kemm.common.repository.jpa.preferences.UserPreferenceRepository;
-import com.cacib.t2s.kemm.domain.enums.KemmUIContext;
-import com.cacib.t2s.kemm.domain.jpa.preferences.UserPreference;
-import com.cacib.t2s.kemm.model.UserPreferenceDto;
-import com.cacib.t2s.kemm.utils.exceptions.InvalidRequestException;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.springframework.http.ResponseEntity;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
-class UserPreferencesServiceTest {
+@ExtendWith(MockitoExtension.class)
+class TemplateServiceTest {
 
     @Mock
-    private UserPreferenceRepository userPreferenceRepository;
+    private TemplateRepository templateRepository;
 
     @Mock
-    private UserPreferenceMapper userPreferenceMapper;
+    private FlxTemplateMapper templateMapper;
 
     @InjectMocks
-    private UserPreferencesService userPreferencesService;
+    private TemplateService templateService;
 
-    @BeforeEach
-    void setUp() {
-        MockitoAnnotations.openMocks(this);
+    @Test
+    void testCreateTemplate_Success() {
+        Template template = new Template();
+        FLxTemplate flxTemplate = new FLxTemplate();
+
+        when(templateMapper.toTemplate(any(Template.class))).thenReturn(flxTemplate);
+        when(templateRepository.save(flxTemplate)).thenReturn(flxTemplate);
+        when(templateMapper.toTemplateDto(flxTemplate)).thenReturn(template);
+
+        ResponseEntity<Template> response = templateService.createTemplate(template);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(template, response.getBody());
+        verify(templateRepository).save(flxTemplate);
     }
 
     @Test
-    void testUpdateConfigsSuccess() {
-        // Arrange
-        UserPreferenceDto dto = new UserPreferenceDto();
-        dto.setId(1L);
-        dto.setUtCode("TEST_CODE");
-        dto.setUiContext("TEST_CONTEXT");
+    void testGetTemplates_Success() {
+        FLxTemplate flxTemplate = new FLxTemplate();
+        List<FLxTemplate> flxTemplates = List.of(flxTemplate);
+        Template templateDto = new Template();
 
-        UserPreference entity = new UserPreference();
-        entity.setId(1L);
-        entity.setUtCode("TEST_CODE");
+        when(templateRepository.findAvailableTemplates()).thenReturn(flxTemplates);
+        when(templateMapper.toTemplateDto(flxTemplate)).thenReturn(templateDto);
 
-        when(userPreferenceRepository.findById(dto.getId())).thenReturn(Optional.of(entity));
-        when(userPreferenceMapper.toEntity(dto)).thenReturn(entity);
-        when(userPreferenceRepository.save(entity)).thenReturn(entity);
-        when(userPreferenceMapper.toDto(entity)).thenReturn(dto);
+        ResponseEntity<List<Template>> response = templateService.getTemplates();
 
-        // Act
-        ResponseEntity<UserPreferenceDto> response = userPreferencesService.updateConfigs(dto);
-
-        // Assert
-        assertNotNull(response);
-        assertEquals(dto, response.getBody());
-        verify(userPreferenceRepository, times(1)).findById(dto.getId());
-        verify(userPreferenceRepository, times(1)).save(entity);
-        verify(userPreferenceMapper, times(1)).toDto(entity);
-    }
-
-    @Test
-    void testUpdateConfigsNotFound() {
-        // Arrange
-        UserPreferenceDto dto = new UserPreferenceDto();
-        dto.setId(1L);
-
-        when(userPreferenceRepository.findById(dto.getId())).thenReturn(Optional.empty());
-
-        // Act & Assert
-        InvalidRequestException exception = assertThrows(InvalidRequestException.class, () -> {
-            userPreferencesService.updateConfigs(dto);
-        });
-
-        assertNotNull(exception);
-        verify(userPreferenceRepository, times(1)).findById(dto.getId());
-        verify(userPreferenceRepository, never()).save(any());
-        verify(userPreferenceMapper, never()).toDto(any());
-    }
-
-    @Test
-    void testGetUserPreferencesSuccess() {
-        // Arrange
-        String utCode = "utXXX";
-        List<UserPreference> entities = new ArrayList<>();
-        UserPreference entity1 = new UserPreference();
-        entity1.setUtCode(utCode);
-        entities.add(entity1);
-
-        UserPreferenceDto dto1 = new UserPreferenceDto();
-        dto1.setUtCode(utCode);
-
-        when(userPreferenceRepository.findByUtCode(utCode)).thenReturn(entities);
-        when(userPreferenceMapper.toDto(entity1)).thenReturn(dto1);
-
-        // Act
-        ResponseEntity<List<UserPreferenceDto>> response = userPreferencesService.getUserPreferences();
-
-        // Assert
-        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals(1, response.getBody().size());
-        assertEquals(dto1, response.getBody().get(0));
-        verify(userPreferenceRepository, times(1)).findByUtCode(utCode);
-        verify(userPreferenceMapper, times(1)).toDto(entity1);
+        assertEquals(templateDto, response.getBody().get(0));
     }
 
     @Test
-    void testGetPreferenceByUiContextSuccess() {
-        // Arrange
-        String uiContext = "TEST_CONTEXT";
-        String utCode = "utXXX";
+    void testDeleteTemplates_Success() {
+        List<Long> ids = List.of(1L, 2L);
+        FLxTemplate flxTemplate = new FLxTemplate();
 
-        UserPreference entity = new UserPreference();
-        entity.setUtCode(utCode);
-        entity.setUiContext(KemmUIContext.valueOf(uiContext));
+        when(templateRepository.findByIdIn(ids)).thenReturn(List.of(flxTemplate));
 
-        UserPreferenceDto dto = new UserPreferenceDto();
-        dto.setUtCode(utCode);
-        dto.setUiContext(uiContext);
+        ResponseEntity<Void> response = templateService.deleteTemplates(ids);
 
-        when(userPreferenceRepository.findByUtCodeAndUiContext(utCode, KemmUIContext.valueOf(uiContext)))
-                .thenReturn(Optional.of(entity));
-        when(userPreferenceMapper.toDto(entity)).thenReturn(dto);
-
-        // Act
-        ResponseEntity<UserPreferenceDto> response = userPreferencesService.getPreferenceByUiContext(uiContext);
-
-        // Assert
-        assertNotNull(response);
-        assertEquals(dto, response.getBody());
-        verify(userPreferenceRepository, times(1))
-                .findByUtCodeAndUiContext(utCode, KemmUIContext.valueOf(uiContext));
-        verify(userPreferenceMapper, times(1)).toDto(entity);
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        verify(templateRepository).deleteAllById(ids);
     }
 
     @Test
-    void testGetPreferenceByUiContextNotFound() {
-        // Arrange
-        String uiContext = "TEST_CONTEXT";
-        String utCode = "utXXX";
+    void testDeleteTemplates_TemplateNotFound() {
+        List<Long> ids = List.of(1L);
 
-        when(userPreferenceRepository.findByUtCodeAndUiContext(utCode, KemmUIContext.valueOf(uiContext)))
-                .thenReturn(Optional.empty());
+        when(templateRepository.findByIdIn(ids)).thenReturn(List.of());
 
-        // Act
-        ResponseEntity<UserPreferenceDto> response = userPreferencesService.getPreferenceByUiContext(uiContext);
+        InvalidRequestException exception = assertThrows(
+            InvalidRequestException.class,
+            () -> templateService.deleteTemplates(ids)
+        );
 
-        // Assert
-        assertNull(response.getBody());
-        verify(userPreferenceRepository, times(1))
-                .findByUtCodeAndUiContext(utCode, KemmUIContext.valueOf(uiContext));
-        verify(userPreferenceMapper, never()).toDto(any());
+        assertEquals("Template to delete not found", exception.getMessage());
+    }
+
+    @Test
+    void testUpdateTemplate_Success() {
+        Long id = 1L;
+        Template template = new Template();
+        FLxTemplate flxTemplate = new FLxTemplate();
+
+        when(templateRepository.findById(id)).thenReturn(Optional.of(flxTemplate));
+        when(templateMapper.toTemplate(template)).thenReturn(flxTemplate);
+        when(templateRepository.save(flxTemplate)).thenReturn(flxTemplate);
+        when(templateMapper.toTemplateDto(flxTemplate)).thenReturn(template);
+
+        ResponseEntity<Template> response = templateService.updateTemplate(id, template);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(template, response.getBody());
+        verify(templateRepository).save(flxTemplate);
+    }
+
+    @Test
+    void testUpdateTemplate_TemplateNotFound() {
+        Long id = 1L;
+        Template template = new Template();
+
+        when(templateRepository.findById(id)).thenReturn(Optional.empty());
+
+        InvalidRequestException exception = assertThrows(
+            InvalidRequestException.class,
+            () -> templateService.updateTemplate(id, template)
+        );
+
+        assertEquals("Template to update not found", exception.getMessage());
     }
 }
