@@ -1,1 +1,60 @@
-@Pattern(regexp = "^[A-Z0-9]+$")
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    /**
+     * Handle ResourceNotFoundException.
+     *
+     * @param ex the exception
+     * @return ProblemDetail with status 404 and a detailed message
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ProblemDetail handleResourceNotFoundException(ResourceNotFoundException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+        problemDetail.setTitle("Resource Not Found");
+        return problemDetail;
+    }
+
+    /**
+     * Handle NonUniqueEntityException.
+     *
+     * @param ex the exception
+     * @return ProblemDetail with status 409 and a detailed message
+     */
+    @ExceptionHandler(NonUniqueEntityException.class)
+    public ProblemDetail handleNonUniqueEntityException(NonUniqueEntityException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        problemDetail.setTitle("Entity Conflict");
+        return problemDetail;
+    }
+
+    /**
+     * Handle IllegalArgumentException and other runtime exceptions.
+     *
+     * @param ex the exception
+     * @return ProblemDetail with status 400 and a detailed message
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail handleIllegalArgumentException(IllegalArgumentException ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
+        problemDetail.setTitle("Invalid Request");
+        return problemDetail;
+    }
+
+    /**
+     * Handle generic exceptions.
+     *
+     * @param ex the exception
+     * @return ProblemDetail with status 500 and a generic error message
+     */
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleGenericException(Exception ex) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred.");
+        problemDetail.setTitle("Internal Server Error");
+        return problemDetail;
+    }
+}
