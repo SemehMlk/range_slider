@@ -1,42 +1,35 @@
+import jakarta.persistence.AttributeConverter;
+import jakarta.persistence.Converter;
+
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
-public class AccountService {
+@Converter
+public class PostgresTextArrayConverter implements AttributeConverter<List<String>, String> {
 
-    /**
-     * Retourne les IBANs des comptes inexistants dans la base de données.
-     *
-     * @param requestIds Liste des IDs envoyés dans la requête.
-     * @param dbAccounts Liste des comptes récupérés depuis la base de données.
-     * @return Liste des IBANs des comptes inexistants.
-     */
-    public List<String> getNonExistentIbans(List<Long> requestIds, List<Account> dbAccounts) {
-        // Créer une map ID -> IBAN pour les comptes récupérés de la base de données
-        Map<Long, String> dbIdToIbanMap = dbAccounts.stream()
-                .collect(Collectors.toMap(Account::getId, Account::getIban));
+    private static final String ARRAY_SEPARATOR = ",";
 
-        // Identifier les IBANs associés aux IDs inexistants
-        return requestIds.stream()
-                .filter(id -> !dbIdToIbanMap.containsKey(id)) // Filtrer les IDs qui n'existent pas
-                .map(id -> getIbanFromRequest(id, requestIds, dbAccounts)) // Récupérer l'IBAN envoyé dans la requête
-                .collect(Collectors.toList());
+    @Override
+    public String convertToDatabaseColumn(List<String> attribute) {
+        if (attribute == null || attribute.isEmpty()) {
+            return "{}";
+        }
+        return "{" + attribute.stream()
+                .map(value -> "\"" + value + "\"") // Ajout des guillemets autour des valeurs
+                .collect(Collectors.joining(ARRAY_SEPARATOR)) + "}";
     }
 
-    /**
-     * Méthode pour retrouver l'IBAN d'un ID inexistant dans la base de données à partir de la requête.
-     *
-     * @param id         ID inexistant.
-     * @param requestIds Liste des IDs envoyés dans la requête.
-     * @param accounts   Liste complète des comptes envoyés dans la requête.
-     * @return L'IBAN correspondant à l'ID inexistant.
-     */
-    private String getIbanFromRequest(Long id, List<Long> requestIds, List<Account> accounts) {
-        // Trouver le compte correspondant à l'ID dans la requête
-        return accounts.stream()
-                .filter(account -> account.getId().equals(id))
-                .map(Account::getIban)
-                .findFirst()
-                .orElse("IBAN_NON_TROUVÉ");
+    @Override
+    public List<String> convertToEntityAttribute(String dbData) {
+        if (dbData == null || dbData.equals("{}")) {
+            return List.of();
+        }
+        return Arrays.stream(dbData
+                .replace("{", "")
+                .replace("}", "")
+                .split(ARRAY_SEPARATOR))
+                .map(value -> value.replace("\"", "")) // Supprime les guillemets autour des valeurs
+                .collect(Collectors.toList());
     }
 }
