@@ -1,35 +1,35 @@
-import jakarta.persistence.AttributeConverter;
-import jakarta.persistence.Converter;
+ subscribedApplication: this.fb.group({
+      gpp: [this.data?.subscribedApplication?.includes('GPP') || false],
+      corona: [this.data?.subscribedApplication?.includes('CORONA') || false],
+      intellimatch: [
+        this.data?.subscribedApplication?.includes('INTELLIMATCH') || false,
+      ],
+    })
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
+initializeSubscribedApplications(apps: string[]) {
+  return {
+    gpp: apps.includes('GPP'),
+    corona: apps.includes('CORONA'),
+    intellimatch: apps.includes('INTELLIMATCH'),
+  };
+}
 
-@Converter
-public class PostgresTextArrayConverter implements AttributeConverter<List<String>, String> {
+subscribedApplication: this.fb.group(
+  this.initializeSubscribedApplications(this.data?.subscribedApplication || [])
+)
 
-    private static final String ARRAY_SEPARATOR = ",";
+getFormValues() {
+  const formValue = this.formGroup.value;
 
-    @Override
-    public String convertToDatabaseColumn(List<String> attribute) {
-        if (attribute == null || attribute.isEmpty()) {
-            return "{}";
-        }
-        return "{" + attribute.stream()
-                .map(value -> "\"" + value + "\"") // Ajout des guillemets autour des valeurs
-                .collect(Collectors.joining(ARRAY_SEPARATOR)) + "}";
-    }
+  // Convert 'subscribedApplication' group into an array of strings
+  const subscribedApplications = Object.entries(
+    formValue.subscribedApplication
+  )
+    .filter(([key, value]) => value === true) // Filtrer les valeurs true
+    .map(([key]) => key.toUpperCase()); // Transformer les clés en chaîne
 
-    @Override
-    public List<String> convertToEntityAttribute(String dbData) {
-        if (dbData == null || dbData.equals("{}")) {
-            return List.of();
-        }
-        return Arrays.stream(dbData
-                .replace("{", "")
-                .replace("}", "")
-                .split(ARRAY_SEPARATOR))
-                .map(value -> value.replace("\"", "")) // Supprime les guillemets autour des valeurs
-                .collect(Collectors.toList());
-    }
+  return {
+    ...formValue,
+    subscribedApplication: subscribedApplications,
+  };
 }
