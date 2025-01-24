@@ -1,35 +1,42 @@
- subscribedApplication: this.fb.group({
-      gpp: [this.data?.subscribedApplication?.includes('GPP') || false],
-      corona: [this.data?.subscribedApplication?.includes('CORONA') || false],
-      intellimatch: [
-        this.data?.subscribedApplication?.includes('INTELLIMATCH') || false,
-      ],
-    })
+Pour modifier votre code afin qu'il retourne un statut No Content (204) au lieu de lancer une exception si le compte n'est pas trouvé, vous pouvez ajuster la méthode en question pour qu'elle utilise une logique conditionnelle pour vérifier la présence d'une entité et retourner la réponse appropriée. Voici un exemple adapté :
 
-initializeSubscribedApplications(apps: string[]) {
-  return {
-    gpp: apps.includes('GPP'),
-    corona: apps.includes('CORONA'),
-    intellimatch: apps.includes('INTELLIMATCH'),
-  };
+@Override
+public ResponseEntity<NostroAccountReferentialDto> getByAccountNumberAndBicEntity(String accountNumber, String bicEntity) {
+    log.info("Receive request to search nostro referential with account number {} and bic entity {}", accountNumber, bicEntity);
+
+    Optional<NostroAccountReferential> referential = nostroAccountReferentialService.getByAccountNumberAndBicEntity(accountNumber, bicEntity);
+
+    if (referential.isEmpty()) {
+        log.info("No nostro referential found with account number {} and bic entity {}", accountNumber, bicEntity);
+        return ResponseEntity.noContent().build();
+    }
+
+    log.info("The nostro referential with account number {} and the bic entity {} exists: {}", accountNumber, bicEntity, referential.get());
+    NostroAccountReferentialDto dto = nostroAccountReferentialMapper.toDto(referential.get());
+
+    return ResponseEntity.ok(dto);
 }
 
-subscribedApplication: this.fb.group(
-  this.initializeSubscribedApplications(this.data?.subscribedApplication || [])
-)
+Explication des modifications :
 
-getFormValues() {
-  const formValue = this.formGroup.value;
+1. Retourner ResponseEntity :
 
-  // Convert 'subscribedApplication' group into an array of strings
-  const subscribedApplications = Object.entries(
-    formValue.subscribedApplication
-  )
-    .filter(([key, value]) => value === true) // Filtrer les valeurs true
-    .map(([key]) => key.toUpperCase()); // Transformer les clés en chaîne
+Utilisez ResponseEntity comme type de retour pour inclure des statuts HTTP dans votre réponse.
 
-  return {
-    ...formValue,
-    subscribedApplication: subscribedApplications,
-  };
-}
+
+
+2. Gestion de l'absence de compte :
+
+Si referential.isEmpty() est vrai, la méthode retourne un statut HTTP 204 No Content grâce à ResponseEntity.noContent().build().
+
+
+
+3. Mapper l'entité à DTO et retourner une réponse 200 OK :
+
+Si un compte est trouvé, il est mappé à un DTO, et la réponse est encapsulée avec un statut 200 OK.
+
+
+
+
+Cette approche respecte les conventions RESTful, où une requête réussie mais sans résultat retourne un statut HTTP 204.
+
