@@ -1,92 +1,11 @@
-Malheureusement, si vous avez configuré useResponseEntity: false pour désactiver globalement les retours de type ResponseEntity dans votre configuration OpenAPI, cela s'applique à l'ensemble des APIs générées. OpenAPI Generator ne permet pas de configurer cette option spécifiquement pour un seul endpoint.
-
-Cependant, vous avez deux solutions possibles pour gérer cette situation :
-
-
----
-
-Option 1 : Modifier manuellement la méthode générée pour cet endpoint
-
-Vous pouvez laisser la génération automatique pour tous les autres endpoints et modifier uniquement la méthode générée pour cet endpoint spécifique. Voici ce que vous pourriez faire :
-
-1. Localisez la méthode générée pour cet endpoint dans votre classe d'implémentation, par exemple dans PublicNostroAccountDelegateImpl.
-
-
-2. Adaptez la méthode pour inclure la logique de retour conditionnel avec ResponseEntity même si cette classe ne le prévoit pas par défaut.
-
-Exemple :
-
-@Override
-public NostroAccountReferentialDto getByAccountNumberAndBicEntity(String accountNumber, String bicEntity) {
-    log.info("Receive request to search nostro referential with account number {} and bic entity {}", accountNumber, bicEntity);
-
-    Optional<NostroAccountReferential> referential = nostroAccountReferentialService.getByAccountNumberAndBicEntity(accountNumber, bicEntity);
-
-    if (referential.isEmpty()) {
+  if (referential.isEmpty()) {
         log.info("No nostro referential found with account number {} and bic entity {}", accountNumber, bicEntity);
-        throw new CustomNoContentException(); // Vous pouvez créer une exception personnalisée
+        
+        // Obtenez la réponse HTTP actuelle
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attributes != null) {
+            attributes.getResponse().setStatus(HttpServletResponse.SC_NO_CONTENT); // Définit le statut 204
+        }
+
+        return null; // Retourne null pour indiquer qu'il n'y a pas de contenu
     }
-
-    log.info("The nostro referential with account number {} and the bic entity {} exists: {}", accountNumber, bicEntity, referential.get());
-    return nostroAccountReferentialMapper.toDto(referential.get());
-}
-
-
-3. Créez une exception personnalisée, par exemple :
-
-@ResponseStatus(HttpStatus.NO_CONTENT)
-public class CustomNoContentException extends RuntimeException {
-    public CustomNoContentException() {
-        super("No content available for the requested resource");
-    }
-}
-
-
-
-Cela permet de gérer un retour 204 No Content pour ce cas précis, tout en conservant l'implémentation globale sans ResponseEntity.
-
-
----
-
-Option 2 : Désactiver useResponseEntity: false et gérer manuellement les retours
-
-Si vous êtes prêt à réactiver useResponseEntity: true, vous pouvez continuer à retourner des objets directement dans vos autres APIs pour la compatibilité avec vos appels existants, mais utiliser ResponseEntity là où nécessaire.
-
-Voici ce que vous pouvez faire :
-
-1. Modifiez la configuration OpenAPI pour useResponseEntity: true.
-
-
-2. Adaptez vos endpoints qui ne nécessitent pas ResponseEntity pour retourner directement les objets. Exemple pour ces endpoints :
-
-@Override
-public SomeDto getSomeResource() {
-    return someService.getSomeResource();
-}
-
-
-3. Pour les endpoints où vous avez besoin de statuts conditionnels, utilisez ResponseEntity comme déjà mentionné dans l'exemple précédent.
-
-
-
-
----
-
-Option 3 : Configuration Multi-Module ou Split Specification
-
-Si vous travaillez sur un projet complexe où certains endpoints nécessitent ResponseEntity et d'autres non, vous pouvez scinder votre fichier OpenAPI en plusieurs spécifications ou modules :
-
-Une spécification avec useResponseEntity: true pour les endpoints nécessitant des statuts conditionnels.
-
-Une autre avec useResponseEntity: false pour les autres endpoints.
-
-
-Générez ensuite des modules distincts et combinez-les dans votre projet.
-
-
----
-
-Conclusion
-
-Si vous ne souhaitez pas réactiver useResponseEntity globalement, l'Option 1 (ajouter une exception personnalisée ou gérer manuellement) est la solution la plus pratique et localisée. Cela vous permet de respecter votre choix global tout en gérant correctement ce cas spécifique.
-
