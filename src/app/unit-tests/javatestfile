@@ -2,32 +2,14 @@
 public class ReferentialImportConfiguration {
 
     @Bean("migratedImportResultMapper")
-    public ReferentialImportResultMapper<MigratedAccountReferential, MigratedAccountReferentialDto> migratedAccountReferentialResultMapper(
+    public ReferentialImportResultMapper<MigratedAccountReferential, MigratedAccountReferentialDto> migratedImportResultMapper(
         @Qualifier("migratedAccountReferentialMapperImpl") AccountReferentialMapper<MigratedAccountReferential, MigratedAccountReferentialDto> accountReferentialMapper) {
         return new ReferentialImportResultMapper<>(accountReferentialMapper);
     }
 
     @Bean("nostroImportResultMapper")
-    public ReferentialImportResultMapper<NostroAccountReferential, NostroAccountReferentialDto> nostroAccountReferentialResultMapper(
+    public ReferentialImportResultMapper<NostroAccountReferential, NostroAccountReferentialDto> nostroImportResultMapper(
         @Qualifier("nostroAccountReferentialMapperImpl") AccountReferentialMapper<NostroAccountReferential, NostroAccountReferentialDto> accountReferentialMapper) {
         return new ReferentialImportResultMapper<>(accountReferentialMapper);
-    }
-
-    @Bean("migratedImportService")
-    public ReferentialImportService<MigratedAccountReferential, MigratedAccountReferentialDto> migratedAccountReferentialImportService(
-        ReferentialService<MigratedAccountReferential> referentialService,
-        @Qualifier("migratedAccountReferentialMapperImpl") AccountReferentialMapper<MigratedAccountReferential, MigratedAccountReferentialDto> accountReferentialMapper,
-        @Qualifier("migratedImportResultMapper") ReferentialImportResultMapper<MigratedAccountReferential, MigratedAccountReferentialDto> referentialImportResultMapper,
-        ReferentialFieldValidator<MigratedAccountReferential> referentialFieldValidator) {
-        return new ReferentialImportService<>(referentialService, accountReferentialMapper, referentialImportResultMapper, referentialFieldValidator);
-    }
-
-    @Bean("nostroImportService")
-    public ReferentialImportService<NostroAccountReferential, NostroAccountReferentialDto> nostroAccountReferentialImportService(
-        ReferentialService<NostroAccountReferential> referentialService,
-        @Qualifier("nostroAccountReferentialMapperImpl") AccountReferentialMapper<NostroAccountReferential, NostroAccountReferentialDto> accountReferentialMapper,
-        @Qualifier("nostroImportResultMapper") ReferentialImportResultMapper<NostroAccountReferential, NostroAccountReferentialDto> referentialImportResultMapper,
-        ReferentialFieldValidator<NostroAccountReferential> referentialFieldValidator) {
-        return new ReferentialImportService<>(referentialService, accountReferentialMapper, referentialImportResultMapper, referentialFieldValidator);
     }
 }
