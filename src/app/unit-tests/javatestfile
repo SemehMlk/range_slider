@@ -1,33 +1,48 @@
-@Configuration
-public class ReferentialImportConfiguration {
+@Component
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+public class InternalMigratedAccountDelegateImpl implements InternalMigratedAccountReferentialsApiDelegate {
 
-    @Bean("migratedImportResultMapper")
-    public ReferentialImportResultMapper<MigratedAccountReferential, MigratedAccountReferentialDto> migratedAccountReferentialResultMapper(
-        @Qualifier("migratedAccountReferentialMapperImpl") AccountReferentialMapper<MigratedAccountReferential, MigratedAccountReferentialDto> accountReferentialMapper) {
-        return new ReferentialImportResultMapper<>(accountReferentialMapper);
-    }
+    @Qualifier("migratedImportService")
+    private final ReferentialImportService<MigratedAccountReferential, MigratedAccountReferentialDto> referentialImportService;
 
-    @Bean("nostroImportResultMapper")
-    public ReferentialImportResultMapper<NostroAccountReferential, NostroAccountReferentialDto> nostroAccountReferentialResultMapper(
-        @Qualifier("nostroAccountReferentialMapperImpl") AccountReferentialMapper<NostroAccountReferential, NostroAccountReferentialDto> accountReferentialMapper) {
-        return new ReferentialImportResultMapper<>(accountReferentialMapper);
-    }
+    // Autres dépendances...
+}
 
-    @Bean("migratedImportService")
-    public ReferentialImportService<MigratedAccountReferential, MigratedAccountReferentialDto> migratedAccountReferentialImportService(
-        ReferentialService<MigratedAccountReferential> referentialService,
-        @Qualifier("migratedAccountReferentialMapperImpl") AccountReferentialMapper<MigratedAccountReferential, MigratedAccountReferentialDto> accountReferentialMapper,
-        @Qualifier("migratedImportResultMapper") ReferentialImportResultMapper<MigratedAccountReferential, MigratedAccountReferentialDto> referentialImportResultMapper,
-        ReferentialFieldValidator<MigratedAccountReferential> referentialFieldValidator) {
-        return new ReferentialImportService<>(referentialService, accountReferentialMapper, referentialImportResultMapper, referentialFieldValidator);
-    }
+@Component
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+public class NostroAccountDelegateImpl implements NostroAccountReferentialsApiDelegate {
 
-    @Bean("nostroImportService")
-    public ReferentialImportService<NostroAccountReferential, NostroAccountReferentialDto> nostroAccountReferentialImportService(
-        ReferentialService<NostroAccountReferential> referentialService,
-        @Qualifier("nostroAccountReferentialMapperImpl") AccountReferentialMapper<NostroAccountReferential, NostroAccountReferentialDto> accountReferentialMapper,
-        @Qualifier("nostroImportResultMapper") ReferentialImportResultMapper<NostroAccountReferential, NostroAccountReferentialDto> referentialImportResultMapper,
-        ReferentialFieldValidator<NostroAccountReferential> referentialFieldValidator) {
-        return new ReferentialImportService<>(referentialService, accountReferentialMapper, referentialImportResultMapper, referentialFieldValidator);
+    @Qualifier("nostroImportService")
+    private final ReferentialImportService<NostroAccountReferential, NostroAccountReferentialDto> referentialImportService;
+
+    // Autres dépendances...
+}
+
+@Mapper(componentModel = "spring")
+public interface MigratedAccountReferentialMapper extends AccountReferentialMapper<MigratedAccountReferential, MigratedAccountReferentialDto> {
+    // Méthodes spécifiques
+}
+
+@Mapper(componentModel = "spring")
+public interface NostroAccountReferentialMapper extends AccountReferentialMapper<NostroAccountReferential, NostroAccountReferentialDto> {
+    // Méthodes spécifiques
+}
+
+@RequiredArgsConstructor
+@Slf4j
+public class ReferentialImportService<U, V> {
+
+    private final ReferentialService<U> referentialService;
+    private final AccountReferentialMapper<U, V> accountReferentialMapper;
+    private final ReferentialImportResultMapper<U, V> referentialImportResultMapper;
+    private final ReferentialFieldValidator<U> referentialFieldValidator;
+
+    @PostConstruct
+    public void logBeans() {
+        log.info("ReferentialImportService initialized with:");
+        log.info(" - ReferentialService: {}", referentialService.getClass().getName());
+        log.info(" - AccountReferentialMapper: {}", accountReferentialMapper.getClass().getName());
+        log.info(" - ReferentialImportResultMapper: {}", referentialImportResultMapper.getClass().getName());
+        log.info(" - ReferentialFieldValidator: {}", referentialFieldValidator.getClass().getName());
     }
 }
