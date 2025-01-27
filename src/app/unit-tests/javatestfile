@@ -1,21 +1,15 @@
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ControllerAdvice;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+@Override
+public NostroAccountReferentialDto getByAccountNumberAndBicEntity(String accountNumber, String bicEntity, HttpServletResponse response) {
+    log.info("Receive request to search nostro referential with account number {} and bic entity {}", accountNumber, bicEntity);
 
-import javax.annotation.Nullable;
+    Optional<NostroAccountReferential> referential = nostroAccountReferentialService.getByAccountNumberAndBicEntity(accountNumber, bicEntity);
 
-@ControllerAdvice
-public class NullResponseAdvice extends ResponseEntityExceptionHandler {
-
-    @ResponseBody
-    @Override
-    @Nullable
-    protected ResponseEntity<Object> handleResponseBody(@Nullable Object body) {
-        if (body == null) {
-            return ResponseEntity.noContent().build(); // Retourne 204 No Content pour toute réponse nulle
-        }
-        return ResponseEntity.ok(body); // Sinon, retourne 200 OK
+    if (referential.isEmpty()) {
+        log.info("No nostro referential found with account number {} and bic entity {}", accountNumber, bicEntity);
+        response.setStatus(HttpServletResponse.SC_NO_CONTENT); // Définit le statut 204
+        return null; // Retourne un corps vide
     }
+
+    log.info("The nostro referential with account number {} and the bic entity {} exists: {}", accountNumber, bicEntity, referential.get());
+    return nostroAccountReferentialMapper.toDto(referential.get());
 }
