@@ -1,44 +1,31 @@
-import jakarta.servlet.http.HttpServletResponse;
-import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.Around;
-import org.aspectj.lang.annotation.Aspect;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
-
-@Aspect
-@Component
-public class NullResponseAspect {
-
-    private final HttpServletResponse response;
-
-    public NullResponseAspect(HttpServletResponse response) {
-        this.response = response;
-    }
-
-    @Around("execution(* com.yourpackage..*.*(..))") // Modifiez le chemin pour votre package
-    public Object handleNullResponse(ProceedingJoinPoint joinPoint) throws Throwable {
-        Object result = joinPoint.proceed(); // Exécute la méthode contrôleur
-
-        // Si la méthode retourne null, définir le statut HTTP à 204 No Content
-        if (result == null) {
-            response.setStatus(HttpStatus.NO_CONTENT.value());
-        }
-        return result; // Retourne l'objet (même si null)
-    }
-}
-
-
-
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-
 @Configuration
-public class AspectConfig {
+public class ReferentialImportConfiguration {
 
-    @Bean
-    public NullResponseAspect nullResponseAspect(HttpServletResponse response) {
-        return new NullResponseAspect(response);
+    @Bean("migratedImportResultMapper")
+    public ReferentialImportResultMapper<MigratedAccountReferential, MigratedAccountReferentialDto> migratedAccountReferentialResultMapper(
+        @Qualifier("migratedAccountReferentialMapperImpl") AccountReferentialMapper<MigratedAccountReferential, MigratedAccountReferentialDto> accountReferentialMapper) {
+        return new ReferentialImportResultMapper<>(accountReferentialMapper);
+    }
+
+    @Bean("nostroImportResultMapper")
+    public ReferentialImportResultMapper<NostroAccountReferential, NostroAccountReferentialDto> nostroAccountReferentialResultMapper(
+        @Qualifier("nostroAccountReferentialMapperImpl") AccountReferentialMapper<NostroAccountReferential, NostroAccountReferentialDto> accountReferentialMapper) {
+        return new ReferentialImportResultMapper<>(accountReferentialMapper);
+    }
+
+    @Bean("migratedImportService")
+    public ReferentialImportService<MigratedAccountReferential, MigratedAccountReferentialDto> migratedAccountReferentialImportService(
+        ReferentialService<MigratedAccountReferential> referentialService,
+        @Qualifier("migratedAccountReferentialMapperImpl") AccountReferentialMapper<MigratedAccountReferential, MigratedAccountReferentialDto> accountReferentialMapper,
+        @Qualifier("migratedImportResultMapper") ReferentialImportResultMapper<MigratedAccountReferential, MigratedAccountReferentialDto> referentialImportResultMapper) {
+        return new ReferentialImportService<>(referentialService, accountReferentialMapper, referentialImportResultMapper);
+    }
+
+    @Bean("nostroImportService")
+    public ReferentialImportService<NostroAccountReferential, NostroAccountReferentialDto> nostroAccountReferentialImportService(
+        ReferentialService<NostroAccountReferential> referentialService,
+        @Qualifier("nostroAccountReferentialMapperImpl") AccountReferentialMapper<NostroAccountReferential, NostroAccountReferentialDto> accountReferentialMapper,
+        @Qualifier("nostroImportResultMapper") ReferentialImportResultMapper<NostroAccountReferential, NostroAccountReferentialDto> referentialImportResultMapper) {
+        return new ReferentialImportService<>(referentialService, accountReferentialMapper, referentialImportResultMapper);
     }
 }
-
