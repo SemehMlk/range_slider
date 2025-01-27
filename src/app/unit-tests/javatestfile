@@ -1,11 +1,21 @@
-  if (referential.isEmpty()) {
+@Override
+public NostroAccountReferentialDto getByAccountNumberAndBicEntity(String accountNumber, String bicEntity) {
+    log.info("Receive request to search nostro referential with account number {} and bic entity {}", accountNumber, bicEntity);
+
+    Optional<NostroAccountReferential> referential = nostroAccountReferentialService.getByAccountNumberAndBicEntity(accountNumber, bicEntity);
+
+    if (referential.isEmpty()) {
         log.info("No nostro referential found with account number {} and bic entity {}", accountNumber, bicEntity);
-        
-        // Obtenez la réponse HTTP actuelle
+
+        // Accéder et configurer explicitement le statut de la réponse
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
-            attributes.getResponse().setStatus(HttpServletResponse.SC_NO_CONTENT); // Définit le statut 204
+            attributes.getResponse().setStatus(HttpServletResponse.SC_NO_CONTENT); // Définit 204
         }
 
-        return null; // Retourne null pour indiquer qu'il n'y a pas de contenu
+        return null; // Retourne null pour garantir qu'aucun contenu n'est envoyé
     }
+
+    log.info("The nostro referential with account number {} and the bic entity {} exists: {}", accountNumber, bicEntity, referential.get());
+    return nostroAccountReferentialMapper.toDto(referential.get()); // Retourne 200 avec contenu
+}
