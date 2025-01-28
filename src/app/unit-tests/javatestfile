@@ -1,45 +1,29 @@
-// Définir les types génériques pour les arguments et résultats
-export type TransformArgs<T = any> = T[];
-export type TransformResult<T = any> = T[];
+// Définir un type générique pour les arguments et résultats
+export type TransformArgs<T> = T[]; // Tableau de type générique T
+export type TransformResult<T> = T[]; // Tableau de type générique T
 
-// Interface pour définir les transformateurs
-export interface Transformer<T = any> {
+// Interface pour définir un transformateur générique
+export interface Transformer<T> {
   separator?: string; // Séparateur optionnel
   transform: (...args: TransformArgs<T>) => TransformResult<T>;
 }
 
-// Créer un Map générique pour gérer différents transformateurs
-export const transformerMap: Map<string, Transformer<any>> = new Map();
+// Créer un Map générique avec des types explicitement spécifiés
+export const transformerMap = new Map<string, Transformer<string>>(); // Utilisation de `string` comme type principal
 
-// Ajouter un transformateur générique pour `subscribedApplication`
+// Ajouter un transformateur pour `subscribedApplication`
 transformerMap.set('subscribedApplication', {
-  separator: ', ', // Définit le séparateur par défaut
+  separator: ', ', // Séparateur par défaut
   transform: (...args: TransformArgs<string>): TransformResult<string> => {
     return args; // Retourne les arguments sous forme de tableau
   },
 });
 
-// Ajouter un autre type de transformateur en exemple
+// Ajouter un autre transformateur typé pour concaténer des chaînes
 transformerMap.set('concatStrings', {
-  separator: ' - ', // Définit un autre séparateur
+  separator: ' - ',
   transform: (...args: TransformArgs<string>): TransformResult<string> => {
     const separator = transformerMap.get('concatStrings')?.separator ?? ' ';
     return [args.join(separator)]; // Concatène les arguments avec le séparateur
   },
 });
-
-import { transformerMap } from './generic-transformer-helper'; // Chemin vers votre helper
-
-// Utiliser le transformateur 'subscribedApplication'
-const transformer = transformerMap.get('subscribedApplication');
-if (transformer) {
-  const result = transformer.transform('a', 'b', 'c');
-  console.log(result); // Affichera : ['a', 'b', 'c']
-}
-
-// Utiliser un autre transformateur, 'concatStrings'
-const concatTransformer = transformerMap.get('concatStrings');
-if (concatTransformer) {
-  const result = concatTransformer.transform('x', 'y', 'z');
-  console.log(result); // Affichera : ['x - y - z'] avec le séparateur défini
-}
