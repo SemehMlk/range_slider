@@ -1,16 +1,29 @@
-// transformer-helper.ts
+// Définir les types génériques pour les arguments et résultats
+export type TransformArgs<T = any> = T[];
+export type TransformResult<T = any> = T[];
 
-// Définir le type pour les arguments de la fonction transformer
-type TransformArgs = string[]; // Un tableau de chaînes de caractères
-type TransformResult = string[]; // Résultat attendu : un tableau de chaînes
+// Interface pour définir les transformateurs
+export interface Transformer<T = any> {
+  separator?: string; // Séparateur optionnel
+  transform: (...args: TransformArgs<T>) => TransformResult<T>;
+}
 
-// Définir le type pour la fonction transformer
-export type TransformFunction = (...args: TransformArgs) => TransformResult;
+// Créer un Map générique pour gérer différents transformateurs
+export const transformerMap: Map<string, Transformer<any>> = new Map();
 
-// Créer et exporter le Map
-export const transformerMap: Map<string, TransformFunction> = new Map();
+// Ajouter un transformateur générique pour `subscribedApplication`
+transformerMap.set('subscribedApplication', {
+  separator: ', ', // Définit le séparateur par défaut
+  transform: (...args: TransformArgs<string>): TransformResult<string> => {
+    return args; // Retourne les arguments sous forme de tableau
+  },
+});
 
-// Ajouter la clé 'subscribedApplication' et la fonction transformer
-transformerMap.set('subscribedApplication', (...args: string[]): TransformResult => {
-  return args;
+// Ajouter un autre type de transformateur en exemple
+transformerMap.set('concatStrings', {
+  separator: ' - ', // Définit un autre séparateur
+  transform: (...args: TransformArgs<string>): TransformResult<string> => {
+    const separator = transformerMap.get('concatStrings')?.separator ?? ' ';
+    return [args.join(separator)]; // Concatène les arguments avec le séparateur
+  },
 });
