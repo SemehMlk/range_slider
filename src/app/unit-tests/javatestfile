@@ -27,3 +27,19 @@ transformerMap.set('concatStrings', {
     return [args.join(separator)]; // Concatène les arguments avec le séparateur
   },
 });
+
+import { transformerMap } from './generic-transformer-helper'; // Chemin vers votre helper
+
+// Utiliser le transformateur 'subscribedApplication'
+const transformer = transformerMap.get('subscribedApplication');
+if (transformer) {
+  const result = transformer.transform('a', 'b', 'c');
+  console.log(result); // Affichera : ['a', 'b', 'c']
+}
+
+// Utiliser un autre transformateur, 'concatStrings'
+const concatTransformer = transformerMap.get('concatStrings');
+if (concatTransformer) {
+  const result = concatTransformer.transform('x', 'y', 'z');
+  console.log(result); // Affichera : ['x - y - z'] avec le séparateur défini
+}
