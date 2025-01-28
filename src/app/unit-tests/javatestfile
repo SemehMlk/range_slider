@@ -1,21 +1,21 @@
-@Configuration
-public class ReferentialImportConfiguration {
+// Définir un type pour les arguments de la fonction transformer
+type TransformArgs = [string, string, string]; // Exemple : trois chaînes de caractères
+type TransformResult = string[]; // Résultat attendu : un tableau de chaînes
 
-    @Bean("migratedImportService")
-    public ReferentialImportService<MigratedAccountReferential, MigratedAccountReferentialDto> migratedAccountReferentialImportService(
-        ReferentialService<MigratedAccountReferential> referentialService,
-        @Qualifier("migratedAccountReferentialMapperImpl") AccountReferentialMapper<MigratedAccountReferential, MigratedAccountReferentialDto> accountReferentialMapper,
-        ReferentialImportResultMapper<MigratedAccountReferential, MigratedAccountReferentialDto> referentialImportResultMapper,
-        ReferentialFieldValidator<MigratedAccountReferential> referentialFieldValidator) {
-        return new ReferentialImportService<>(referentialService, accountReferentialMapper, referentialImportResultMapper, referentialFieldValidator);
-    }
+// Définir le type de la fonction transformer
+type Transformer = (...args: TransformArgs) => TransformResult;
 
-    @Bean("nostroImportService")
-    public ReferentialImportService<NostroAccountReferential, NostroAccountReferentialDto> nostroAccountReferentialImportService(
-        ReferentialService<NostroAccountReferential> referentialService,
-        @Qualifier("nostroAccountReferentialMapperImpl") AccountReferentialMapper<NostroAccountReferential, NostroAccountReferentialDto> accountReferentialMapper,
-        ReferentialImportResultMapper<NostroAccountReferential, NostroAccountReferentialDto> referentialImportResultMapper,
-        ReferentialFieldValidator<NostroAccountReferential> referentialFieldValidator) {
-        return new ReferentialImportService<>(referentialService, accountReferentialMapper, referentialImportResultMapper, referentialFieldValidator);
-    }
+// Créer le Map avec les types spécifiques
+const map: Map<string, Transformer> = new Map();
+
+// Ajouter la clé 'subscribedApplication' et la fonction transformer
+map.set('subscribedApplication', (a: string, b: string, c: string): TransformResult => {
+  return [a, b, c];
+});
+
+// Utilisation de la fonction transformer
+const transformer = map.get('subscribedApplication');
+if (transformer) {
+  const result = transformer('a', 'b', 'c');
+  console.log(result); // Affichera : ['a', 'b', 'c']
 }
