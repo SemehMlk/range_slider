@@ -1,21 +1,16 @@
-// Définir un type pour les arguments de la fonction transformer
+// transformer-helper.ts
+
+// Définir le type pour les arguments de la fonction transformer
 type TransformArgs = string[]; // Un tableau de chaînes de caractères
 type TransformResult = string[]; // Résultat attendu : un tableau de chaînes
 
-// Définir un type pour la fonction transformer
-type TransformFunction = (...args: TransformArgs) => TransformResult;
+// Définir le type pour la fonction transformer
+export type TransformFunction = (...args: TransformArgs) => TransformResult;
 
-// Créer le Map avec les types spécifiques
-const map: Map<string, TransformFunction> = new Map();
+// Créer et exporter le Map
+export const transformerMap: Map<string, TransformFunction> = new Map();
 
 // Ajouter la clé 'subscribedApplication' et la fonction transformer
-map.set('subscribedApplication', (...args: string[]): TransformResult => {
+transformerMap.set('subscribedApplication', (...args: string[]): TransformResult => {
   return args;
 });
-
-// Utilisation de la fonction transformer
-const transformer = map.get('subscribedApplication');
-if (transformer) {
-  const result = transformer('a', 'b', 'c', 'd', 'e');
-  console.log(result); // Affichera : ['a', 'b', 'c', 'd', 'e']
-}
