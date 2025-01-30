@@ -6,31 +6,41 @@ import { takeUntil, tap } from 'rxjs/operators';
 
 @Injectable()
 export class CustomPaginatorIntl extends MatPaginatorIntl implements OnDestroy {
-  private destroy$ = new Subject<void>(); // Utilisé pour gérer le désabonnement proprement
+  private destroy$ = new Subject<void>(); // Gestion du cycle de vie
+
+  // Constante pour la clé de traduction
+  private readonly TRANSLATION_KEY = 'common.labels.items-per-page';
 
   constructor(private translate: TranslateService) {
     super();
-    this.initializeTranslations();
-  }
 
-  private initializeTranslations() {
+    // Réagit aux changements de langue
     this.translate.onLangChange
       .pipe(
-        takeUntil(this.destroy$), // Se désabonne automatiquement lorsque `destroy$` est déclenché
-        tap(() => this.updateTranslations()) // Utilisation de `tap` pour éviter le `subscribe` direct
+        takeUntil(this.destroy$),
+        tap(() => this.getAndInitTranslations())
       )
       .subscribe();
+
+    // Initialisation au chargement
+    this.getAndInitTranslations();
   }
 
-  private updateTranslations() {
-    this.translate.get('PAGINATOR').subscribe(translations => {
-      this.itemsPerPageLabel = translations['ITEMS_PER_PAGE'];
-      this.changes.next(); // Notifie Angular que les labels ont changé
-    });
+  private getAndInitTranslations(): void {
+    this.translate
+      .get([this.TRANSLATION_KEY])
+      .pipe(
+        takeUntil(this.destroy$),
+        tap((translations) => {
+          this.itemsPerPageLabel = translations[this.TRANSLATION_KEY];
+          this.changes.next(); // Notifie le paginator que le label a changé
+        })
+      )
+      .subscribe(); // Finalisation (nécessaire pour déclencher l'Observable)
   }
 
   ngOnDestroy() {
-    this.destroy$.next(); // Déclenche la fin des abonnements
-    this.destroy$.complete();
+    this.destroy$.next(); // Déclenche la destruction
+    this.destroy$.complete(); // Termine l'Observable
   }
 }
