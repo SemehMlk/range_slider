@@ -1,25 +1,36 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { MatPaginatorIntl } from '@angular/material/paginator';
 import { TranslateService } from '@ngx-translate/core';
+import { Subject } from 'rxjs';
+import { takeUntil, tap } from 'rxjs/operators';
 
 @Injectable()
-export class CustomPaginatorIntl extends MatPaginatorIntl {
+export class CustomPaginatorIntl extends MatPaginatorIntl implements OnDestroy {
+  private destroy$ = new Subject<void>(); // Utilisé pour gérer le désabonnement proprement
+
   constructor(private translate: TranslateService) {
     super();
-    this.translate.onLangChange.subscribe(() => {
-      this.getAndInitTranslations();
-    });
-    this.getAndInitTranslations();
+    this.initializeTranslations();
   }
 
-  getAndInitTranslations() {
-    this.translate.get(['PAGINATOR.ITEMS_PER_PAGE']).subscribe((translations) => {
-      this.itemsPerPageLabel = translations['PAGINATOR.ITEMS_PER_PAGE'];
-      this.changes.next();
+  private initializeTranslations() {
+    this.translate.onLangChange
+      .pipe(
+        takeUntil(this.destroy$), // Se désabonne automatiquement lorsque `destroy$` est déclenché
+        tap(() => this.updateTranslations()) // Utilisation de `tap` pour éviter le `subscribe` direct
+      )
+      .subscribe();
+  }
+
+  private updateTranslations() {
+    this.translate.get('PAGINATOR').subscribe(translations => {
+      this.itemsPerPageLabel = translations['ITEMS_PER_PAGE'];
+      this.changes.next(); // Notifie Angular que les labels ont changé
     });
   }
-}
 
-export function paginatorFactory(translate: TranslateService) {
-  return new CustomPaginatorIntl(translate);
+  ngOnDestroy() {
+    this.destroy$.next(); // Déclenche la fin des abonnements
+    this.destroy$.complete();
+  }
 }
