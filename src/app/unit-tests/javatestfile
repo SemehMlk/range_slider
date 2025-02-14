@@ -45,5 +45,28 @@ ngOnInit() {
   }
 }
 
+import { Router, NavigationEnd } from '@angular/router';
+import { FilterService } from '../services/filter.service';
+
+constructor(private router: Router, private filterService: FilterService) {}
+
+ngOnInit() {
+  this.router.events.subscribe(event => {
+    if (event instanceof NavigationEnd && !event.url.includes('/detail')) {
+      this.filterService.resetFilters('list-page'); // Reset seulement pour la liste
+    }
+  });
+}
+
+
+export interface AgGridFilterModel {
+  [key: string]: {
+    filterType: string;
+    type?: string;
+    filter?: string | number | boolean;
+    values?: string[];
+  };
+}
+
 
 
