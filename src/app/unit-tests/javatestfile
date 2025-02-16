@@ -1,72 +1,49 @@
-import { Injectable } from '@angular/core';
-import { AgGridFilterModel } from '../models/filter.model';
+import com.fasterxml.jackson.databind.ObjectMapper;
 
-@Injectable({
-  providedIn: 'root'
-})
-export class FilterService {
-  private filters: Map<string, AgGridFilterModel> = new Map();
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-  setFilters(context: string, filters: AgGridFilterModel): void {
-    this.filters.set(context, filters);
-  }
+public class TemplateParser {
 
-  getFilters(context: string): AgGridFilterModel | null {
-    return this.filters.get(context) || null;
-  }
+    public static String extractJson(String text, String startDelimiter, String endDelimiter) {
+        String regex = Pattern.quote(startDelimiter) + "(.*?)" + Pattern.quote(endDelimiter);
+        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
+        Matcher matcher = pattern.matcher(text);
 
-  resetFilters(context: string): void {
-    this.filters.delete(context);
-  }
-
-  resetAllFilters(): void {
-    this.filters.clear();
-  }
-}
-
-
-dans la.liste
-import { Router } from '@angular/router';
-import { FilterService } from '../services/filter.service';
-import { AgGridFilterModel } from '../models/filter.model';
-
-constructor(private router: Router, private filterService: FilterService) {}
-
-onNavigateToDetail(selectedItem: any) {
-  const gridFilters: AgGridFilterModel = this.gridApi.getFilterModel();
-  this.filterService.setFilters('list-page', gridFilters);
-  this.router.navigate(['/detail', selectedItem.id]);
-}
-
-ngOnInit() {
-  const savedFilters = this.filterService.getFilters('list-page');
-  if (savedFilters) {
-    this.gridApi.setFilterModel(savedFilters);
-  }
-}
-
-import { Router, NavigationEnd } from '@angular/router';
-import { FilterService } from '../services/filter.service';
-
-constructor(private router: Router, private filterService: FilterService) {}
-
-ngOnInit() {
-  this.router.events.subscribe(event => {
-    if (event instanceof NavigationEnd && !event.url.includes('/detail')) {
-      this.filterService.resetFilters('list-page'); // Reset seulement pour la liste
+        if (matcher.find()) {
+            return matcher.group(1).trim();
+        }
+        return null;
     }
-  });
+
+    public static void main(String[] args) {
+        String template = """
+                ARCHIVE_BEGIN
+                PAYLOAD_INFO_BEGIN
+                { "info": "some data" }
+                PAYLOAD_INFO_END
+                PAYLOAD_BEGIN
+                { "key1": "value1", "key2": "value2" }
+                PAYLOAD_END
+                ARCHIVE_END
+                """;
+
+        // Extraction du JSON dans PAYLOAD
+        String myJson = extractJson(template, "PAYLOAD_BEGIN", "PAYLOAD_END");
+
+        if (myJson != null) {
+            System.out.println("JSON extrait : " + myJson);
+
+            // Désérialisation en objet TnsSchema
+            ObjectMapper objectMapper = new ObjectMapper();
+            try {
+                TnsSchema myObject = objectMapper.readValue(myJson, TnsSchema.class);
+                System.out.println("Objet TnsSchema : " + myObject);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("Aucun JSON trouvé entre PAYLOAD_BEGIN et PAYLOAD_END.");
+        }
+    }
 }
-
-
-export interface AgGridFilterModel {
-  [key: string]: {
-    filterType: string;
-    type?: string;
-    filter?: string | number | boolean;
-    values?: string[];
-  };
-}
-
-
-
