@@ -1,49 +1,39 @@
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+public class TsnPayloadInfoProcessor {
 
-public class TemplateParser {
+    public static TsnPayloadInfo processPayload(String json) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        try {
+            // Désérialiser le JSON en objet TsnPayloadInfo
+            TsnPayloadInfo tsnPayloadInfo = objectMapper.readValue(json, TsnPayloadInfo.class);
 
-    public static String extractJson(String text, String startDelimiter, String endDelimiter) {
-        String regex = Pattern.quote(startDelimiter) + "(.*?)" + Pattern.quote(endDelimiter);
-        Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(text);
-
-        if (matcher.find()) {
-            return matcher.group(1).trim();
+            // Mettre à jour les propriétés selon le type
+            if (tsnPayloadInfo.getProperties() != null) {
+                for (TsnPayloadInfoProperty property : tsnPayloadInfo.getProperties()) {
+                    if ("localDtm".equalsIgnoreCase(property.getType())) {
+                        String currentDateTime = LocalDateTime.now()
+                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                        property.setValue(currentDateTime);
+                    }
+                }
+            }
+            return tsnPayloadInfo;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
-        return null;
     }
 
     public static void main(String[] args) {
-        String template = """
-                ARCHIVE_BEGIN
-                PAYLOAD_INFO_BEGIN
-                { "info": "some data" }
-                PAYLOAD_INFO_END
-                PAYLOAD_BEGIN
-                { "key1": "value1", "key2": "value2" }
-                PAYLOAD_END
-                ARCHIVE_END
-                """;
+        // Exemple JSON
+        String json = "{ \"request\": { \"name\": \"ExampleName\" }, \"properties\": [ { \"type\": \"localDtm\", \"value\": \"\" }, { \"type\": \"Type2\", \"value\": \"Value2\" } ] }";
 
-        // Extraction du JSON dans PAYLOAD
-        String myJson = extractJson(template, "PAYLOAD_BEGIN", "PAYLOAD_END");
-
-        if (myJson != null) {
-            System.out.println("JSON extrait : " + myJson);
-
-            // Désérialisation en objet TnsSchema
-            ObjectMapper objectMapper = new ObjectMapper();
-            try {
-                TnsSchema myObject = objectMapper.readValue(myJson, TnsSchema.class);
-                System.out.println("Objet TnsSchema : " + myObject);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            System.out.println("Aucun JSON trouvé entre PAYLOAD_BEGIN et PAYLOAD_END.");
-        }
+        // Appel de la fonction et affichage du résultat
+        TsnPayloadInfo result = processPayload(json);
+        System.out.println("TsnPayloadInfo mis à jour : " + result);
     }
 }
