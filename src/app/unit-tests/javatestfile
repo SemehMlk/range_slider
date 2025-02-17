@@ -1,50 +1,33 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.List;
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.8.xsd">
 
-public class TsnPayloadInfoProcessor {
+    <changeSet id="1" author="dev">
+        <createTable tableName="flx_template">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(255)"/>
+        </createTable>
 
-    public static TsnPayloadInfo processPayload(String json) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        try {
-            // Désérialiser le JSON en objet TsnPayloadInfo
-            TsnPayloadInfo tsnPayloadInfo = objectMapper.readValue(json, TsnPayloadInfo.class);
+        <createTable tableName="flx_action">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="action_type" type="varchar(255)"/>
+            <column name="template_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
 
-            // Mettre à jour les propriétés selon le type
-            if (tsnPayloadInfo.getProperties() != null) {
-                for (TsnPayloadInfoProperty property : tsnPayloadInfo.getProperties()) {
-                    if ("localDtm".equalsIgnoreCase(property.getType())) {
-                        String currentDateTime = LocalDateTime.now()
-                                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-                        property.setValue(currentDateTime);
-                    }
-                }
-            }
-            return tsnPayloadInfo;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
+        <addForeignKeyConstraint 
+            baseTableName="flx_action" 
+            baseColumnNames="template_id"
+            referencedTableName="flx_template"
+            referencedColumnNames="id"
+            constraintName="fk_flx_action_template"/>
+    </changeSet>
 
-    public static void main(String[] args) {
-        // Exemple JSON
-        String json = "{ \"request\": { \"name\": \"ExampleName\" }, \"properties\": [ { \"type\": \"localDtm\", \"value\": \"\" }, { \"type\": \"Type2\", \"value\": \"Value2\" } ] }";
-
-        // Appel de la fonction et affichage du résultat
-        TsnPayloadInfo result = processPayload(json);
-        System.out.println("TsnPayloadInfo mis à jour : " + result);
-    }
-}
-
-
-🔍 Explication des paramètres :
-Paramètre	Valeur optimisée	Explication
-registry-fetch-interval-seconds	15	Les services rafraîchissent leur liste de services disponibles toutes les 15s (au lieu de 30s).
-lease-renewal-interval-in-seconds	15	Chaque service envoie son heartbeat toutes les 15s (au lieu de 30s).
-lease-expiration-duration-in-seconds	45	Un service qui ne répond plus sera supprimé après 45s (au lieu de 90s).
-fetch-registry: false	Désactivé	Évite que les services téléchargent toute la liste au démarrage (si non nécessaire).
-enable-self-preservation	false	Désactive la protection automatique qui peut ralentir l'expiration des services morts.
-eviction-interval-timer-in-ms	30000 (30s)	Accélère la suppression des services non répondants.
-
+</databaseChangeLog>
