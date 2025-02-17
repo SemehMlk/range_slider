@@ -37,3 +37,14 @@ public class TsnPayloadInfoProcessor {
         System.out.println("TsnPayloadInfo mis à jour : " + result);
     }
 }
+
+
+🔍 Explication des paramètres :
+Paramètre	Valeur optimisée	Explication
+registry-fetch-interval-seconds	15	Les services rafraîchissent leur liste de services disponibles toutes les 15s (au lieu de 30s).
+lease-renewal-interval-in-seconds	15	Chaque service envoie son heartbeat toutes les 15s (au lieu de 30s).
+lease-expiration-duration-in-seconds	45	Un service qui ne répond plus sera supprimé après 45s (au lieu de 90s).
+fetch-registry: false	Désactivé	Évite que les services téléchargent toute la liste au démarrage (si non nécessaire).
+enable-self-preservation	false	Désactive la protection automatique qui peut ralentir l'expiration des services morts.
+eviction-interval-timer-in-ms	30000 (30s)	Accélère la suppression des services non répondants.
+
