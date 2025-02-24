@@ -1,33 +1,19 @@
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.8.xsd">
+public static MessageParseResponse toMessageParseResponse(ParsedCanonicalBean parsedCanonicalBean) {
+    MessageParseResponse messageParseResponse = new MessageParseResponse();
 
-    <changeSet id="1" author="dev">
-        <createTable tableName="flx_template">
-            <column name="id" type="bigint" autoIncrement="true">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="name" type="varchar(255)"/>
-        </createTable>
+    // Déclaration de canonicalBean juste avant son utilisation
+    CanonicalBean canonicalBean = new CanonicalBean();
+    canonicalBean.senderBic(parsedCanonicalBean.getSenderBic());
+    canonicalBean.setReceiverBic(parsedCanonicalBean.getReceiverBic());
+    canonicalBean.setAmount(parsedCanonicalBean.getAmount());
+    canonicalBean.setMessageType(parsedCanonicalBean.getMessageType());
+    canonicalBean.setCurrency(parsedCanonicalBean.getCurrency());
+    canonicalBean.setTrn(parsedCanonicalBean.getTrn());
+    canonicalBean.setUetr(parsedCanonicalBean.getUetr());
+    canonicalBean.setValueDate(parsedCanonicalBean.getValueDate());
+    canonicalBean.setMur(parsedCanonicalBean.getMur());
+    canonicalBean.setRoutingCode(parsedCanonicalBean.getRoutingCode());
 
-        <createTable tableName="flx_action">
-            <column name="id" type="bigint" autoIncrement="true">
-                <constraints primaryKey="true" nullable="false"/>
-            </column>
-            <column name="action_type" type="varchar(255)"/>
-            <column name="template_id" type="bigint">
-                <constraints nullable="false"/>
-            </column>
-        </createTable>
-
-        <addForeignKeyConstraint 
-            baseTableName="flx_action" 
-            baseColumnNames="template_id"
-            referencedTableName="flx_template"
-            referencedColumnNames="id"
-            constraintName="fk_flx_action_template"/>
-    </changeSet>
-
-</databaseChangeLog>
+    messageParseResponse.setCanonicalBean(canonicalBean); // Utilisation immédiate
+    return messageParseResponse;
+}
