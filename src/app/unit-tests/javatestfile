@@ -1,19 +1,80 @@
-public static MessageParseResponse toMessageParseResponse(ParsedCanonicalBean parsedCanonicalBean) {
-    MessageParseResponse messageParseResponse = new MessageParseResponse();
+Here's a detailed description of your API in English:
 
-    // Déclaration de canonicalBean juste avant son utilisation
-    CanonicalBean canonicalBean = new CanonicalBean();
-    canonicalBean.senderBic(parsedCanonicalBean.getSenderBic());
-    canonicalBean.setReceiverBic(parsedCanonicalBean.getReceiverBic());
-    canonicalBean.setAmount(parsedCanonicalBean.getAmount());
-    canonicalBean.setMessageType(parsedCanonicalBean.getMessageType());
-    canonicalBean.setCurrency(parsedCanonicalBean.getCurrency());
-    canonicalBean.setTrn(parsedCanonicalBean.getTrn());
-    canonicalBean.setUetr(parsedCanonicalBean.getUetr());
-    canonicalBean.setValueDate(parsedCanonicalBean.getValueDate());
-    canonicalBean.setMur(parsedCanonicalBean.getMur());
-    canonicalBean.setRoutingCode(parsedCanonicalBean.getRoutingCode());
 
-    messageParseResponse.setCanonicalBean(canonicalBean); // Utilisation immédiate
-    return messageParseResponse;
-}
+---
+
+API for Validation and Conversion of MX and MT Messages
+
+Overview: This API, developed within the Flex project, is designed to handle the validation and conversion of financial messages in MX and MT formats. It serves as a critical component for ensuring the integrity and proper formatting of these messages before they are processed further.
+
+Main Features:
+
+1. Message Validation:
+
+Supports validation of both MX (ISO 20022 XML) and MT (SWIFT FIN) message formats.
+
+Ensures that messages comply with industry standards and specific business rules.
+
+Returns detailed validation reports indicating any issues found within the message structure or content.
+
+
+
+2. Message Conversion:
+
+Provides conversion capabilities between MX and MT formats.
+
+Allows seamless transformation of messages from one format to another, ensuring compatibility with different systems and workflows.
+
+
+
+3. Message Parsing:
+
+Extracts relevant data fields from both MX and MT messages.
+
+Provides structured data outputs that can be easily consumed by downstream systems.
+
+
+
+
+Integration with Mambo:
+
+The API is consumed by the Mambo project to validate, parse, and extract data from incoming MX or MT messages.
+
+Mambo relies on the API's robust validation and parsing logic to ensure accurate data extraction for further processing and analysis.
+
+
+Internal Usage in Flex:
+
+Besides being consumed externally by Mambo, Flex also utilizes the API for parsing messages internally.
+
+This internal usage supports additional scenarios where message validation and parsing are required within Flex itself.
+
+
+Technical Capabilities:
+
+Exposes RESTful endpoints for easy integration.
+
+Supports synchronous and asynchronous processing of messages.
+
+Provides detailed logging and error handling for better traceability and debugging.
+
+
+Security Features:
+
+Implements authentication and authorization mechanisms.
+
+Ensures secure data transmission with encryption protocols.
+
+
+Scalability and Performance:
+
+Optimized for high-throughput message processing.
+
+Designed to handle large volumes of financial messages efficiently.
+
+
+
+---
+
+This description should cover the technical depth and usage of your API comprehensively. Let me know if you'd like to tweak any specific section!
+
