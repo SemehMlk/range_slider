@@ -1,8 +1,10 @@
 private boolean isValidJson(String json) {
-        try {
-            objectMapper.readTree(json);
-            return true;
-        } catch (JsonProcessingException e) {
-            return false;
-        }
+    try {
+        // Désactiver les fonctionnalités permissives de Jackson
+        objectMapper.enable(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION);
+        objectMapper.readTree(json);
+        return true;
+    } catch (JsonProcessingException e) {
+        return false;
     }
+}
