@@ -1,24 +1,38 @@
-@Service
-@RequiredArgsConstructor
-@Slf4j
-public class MessagesService {
+@Override
+public void processPayload(ReceivedInboundMessage message) {
+    final long messageId = Long.parseLong(String.valueOf(message.getId()));
 
-    private final RestClient restClient;
+    inboundMessageRepository.findById(messageId)
+        .ifPresentOrElse(inboundMessage -> {
+            log.trace("Inbound message: {}", inboundMessage);
 
-    @Value("${flx.api.messages-parser.api-url}")
-    private String messagesParserApiUrl;
+            ParsedCanonicalBean parsedCanonicalBean = messagesService.parseMessage(
+                MessageToParseRequest.builder()
+                    .content(inboundMessage.getContent())
+                    .build()
+            );
 
-    public ParsedCanonicalBean parseMessage(MessageToParseRequest message) {
-        try {
-            return restClient.post()
-                    .uri(messagesParserApiUrl)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(message)
-                    .retrieve()
-                    .body(ParsedCanonicalBean.class);
-        } catch (RestClientException e) {
-            log.error("Unexpected error occurred while calling the message parser API", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process the request", e);
-        }
-    }
+            log.info("Parsed message: {}", parsedCanonicalBean);
+
+            CanonicalMessage canonicalMessage = CanonicalMessage.builder()
+                .id(inboundMessage.getId())
+                .messageType(parsedCanonicalBean.getMessageType())
+                .mur(parsedCanonicalBean.getMur())
+                .uetr(parsedCanonicalBean.getUetr())
+                .trn(parsedCanonicalBean.getTrn())
+                .amount(parsedCanonicalBean.getAmount())
+                .currency(parsedCanonicalBean.getCurrency())
+                .senderBic(parsedCanonicalBean.getSenderBic())
+                .receiverBic(parsedCanonicalBean.getReceiverBic())
+                .creditorAccount(parsedCanonicalBean.getCreditorAccount())
+                .instructionForCreditorAgent(parsedCanonicalBean.getCreditorAgentInstruction())
+                .instructionForNextAgent(parsedCanonicalBean.getNextAgentInstruction())
+                .remittanceInformation(parsedCanonicalBean.getUnstructuredRemittanceInformation())
+                .status(MessageStatus.VALIDATED)
+                .inboundMessage(inboundMessage)
+                .build();
+
+            inboundMessage.setCanonicalMessage(canonicalMessage);
+            canonicalMessageRepository.save(canonicalMessage);
+        }, () -> log.error("Could not find canonical message by ID <{}>.", messageId));
 }
