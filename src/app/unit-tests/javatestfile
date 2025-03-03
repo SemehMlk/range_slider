@@ -1,3 +1,24 @@
- Map<String, String> errorResponse = new HashMap<>();
-        errorResponse.put("error", e.getMessage());  // Message d'erreur détaillé
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class MessagesService {
+
+    private final RestClient restClient;
+
+    @Value("${flx.api.messages-parser.api-url}")
+    private String messagesParserApiUrl;
+
+    public ParsedCanonicalBean parseMessage(MessageToParseRequest message) {
+        try {
+            return restClient.post()
+                    .uri(messagesParserApiUrl)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(message)
+                    .retrieve()
+                    .body(ParsedCanonicalBean.class);
+        } catch (RestClientException e) {
+            log.error("Unexpected error occurred while calling the message parser API", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process the request", e);
+        }
+    }
+}
