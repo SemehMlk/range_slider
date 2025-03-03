@@ -1,25 +1,3 @@
-<sql>
-            ALTER TABLE canonical_message ALTER COLUMN amount DROP NOT NULL;
-        </sql>
-
-ALTER TABLE canonical_message
-    ALTER COLUMN sender_bic DROP NOT NULL,
-    ALTER COLUMN message_type DROP NOT NULL,
-    ALTER COLUMN receiver_bic DROP NOT NULL,
-    ALTER COLUMN mur DROP NOT NULL,
-    ALTER COLUMN trn DROP NOT NULL,
-    ALTER COLUMN uetr DROP NOT NULL,
-    ALTER COLUMN scope DROP NOT NULL,
-    ALTER COLUMN amount DROP NOT NULL,
-    ALTER COLUMN currency DROP NOT NULL,
-    ALTER COLUMN status DROP NOT NULL,
-    ALTER COLUMN creditor_account DROP NOT NULL,
-    ALTER COLUMN debtor_account DROP NOT NULL,
-    ALTER COLUMN value_date DROP NOT NULL,
-    ALTER COLUMN reception_date DROP NOT NULL,
-    ALTER COLUMN settlement_date DROP NOT NULL,
-    ALTER COLUMN instruction_for_creditor_agent DROP NOT NULL,
-    ALTER COLUMN instruction_for_next_agent DROP NOT NULL,
-    ALTER COLUMN remittance_information DROP NOT NULL,
-    ALTER COLUMN returned_id DROP NOT NULL,
-    ALTER COLUMN content DROP NOT NULL;
+ Map<String, String> errorResponse = new HashMap<>();
+        errorResponse.put("error", e.getMessage());  // Message d'erreur détaillé
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
