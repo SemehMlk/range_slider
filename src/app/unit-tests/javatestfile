@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import java.io.IOException;
-import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -20,31 +19,35 @@ public class MessageClientService {
     @Value("${flx.api.messages-parser.api-url}")
     private String messagesParserApiUrl;
 
-    public ParsedCanonicalBean parseMessage(MessageToParseRequest message) {
+    public ResponseEntity<CanonicalMessage> parseMessage(MessageToParseRequest message) {
         try {
-            return restTemplate.postForObject(messagesParserApiUrl, message, ParsedCanonicalBean.class);
+            return restTemplate.postForEntity(messagesParserApiUrl, message, CanonicalMessage.class);
         } catch (HttpStatusCodeException e) {
-            CustomProblemDetail problemDetail = extractProblemDetail(e);
-            log.error("Error calling message parser API: {}", problemDetail);
-            throw new ResponseStatusException(HttpStatus.valueOf(problemDetail.getStatus()), problemDetail.getMessage());
+            throw extractAndThrowProblemDetail(e);
         } catch (Exception e) {
             log.error("Unexpected error while calling the message parser API", e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process the request", e);
         }
     }
 
-    private CustomProblemDetail extractProblemDetail(HttpStatusCodeException e) {
+    private ResponseStatusException extractAndThrowProblemDetail(HttpStatusCodeException e) {
         try {
-            return objectMapper.readValue(e.getResponseBodyAsString(), CustomProblemDetail.class);
+            // Récupérer le CustomProblemDetail depuis la réponse JSON
+            CustomProblemDetail problemDetail = objectMapper.readValue(e.getResponseBodyAsString(), CustomProblemDetail.class);
+            log.error("Propagating API error: {}", problemDetail);
+
+            return new ResponseStatusException(
+                HttpStatus.valueOf(problemDetail.getStatus()), 
+                problemDetail.getMessage(), 
+                e
+            );
         } catch (IOException ex) {
             log.error("Failed to parse error response into CustomProblemDetail", ex);
-            return CustomProblemDetail.builder()
-                    .timestamp(Instant.now())
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                    .error("Internal Server Error")
-                    .message("Unexpected error format.")
-                    .errorCode("PARSING_ERROR")
-                    .build();
+            return new ResponseStatusException(
+                HttpStatus.INTERNAL_SERVER_ERROR, 
+                "Unexpected error format from API", 
+                ex
+            );
         }
     }
 }
