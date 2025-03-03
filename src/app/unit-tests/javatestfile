@@ -1,14 +1,25 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+<sql>
+            ALTER TABLE canonical_message ALTER COLUMN amount DROP NOT NULL;
+        </sql>
 
-    <changeSet id="update-amount-nullable" author="your_name">
-        <modifyColumn tableName="canonical_message">
-            <column name="amount" nullable="true"/>
-        </modifyColumn>
-    </changeSet>
-
-</databaseChangeLog>
+ALTER TABLE canonical_message
+    ALTER COLUMN sender_bic DROP NOT NULL,
+    ALTER COLUMN message_type DROP NOT NULL,
+    ALTER COLUMN receiver_bic DROP NOT NULL,
+    ALTER COLUMN mur DROP NOT NULL,
+    ALTER COLUMN trn DROP NOT NULL,
+    ALTER COLUMN uetr DROP NOT NULL,
+    ALTER COLUMN scope DROP NOT NULL,
+    ALTER COLUMN amount DROP NOT NULL,
+    ALTER COLUMN currency DROP NOT NULL,
+    ALTER COLUMN status DROP NOT NULL,
+    ALTER COLUMN creditor_account DROP NOT NULL,
+    ALTER COLUMN debtor_account DROP NOT NULL,
+    ALTER COLUMN value_date DROP NOT NULL,
+    ALTER COLUMN reception_date DROP NOT NULL,
+    ALTER COLUMN settlement_date DROP NOT NULL,
+    ALTER COLUMN instruction_for_creditor_agent DROP NOT NULL,
+    ALTER COLUMN instruction_for_next_agent DROP NOT NULL,
+    ALTER COLUMN remittance_information DROP NOT NULL,
+    ALTER COLUMN returned_id DROP NOT NULL,
+    ALTER COLUMN content DROP NOT NULL;
