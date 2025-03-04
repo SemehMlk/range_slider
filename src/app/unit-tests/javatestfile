@@ -1,53 +1,90 @@
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.server.ResponseStatusException;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import java.io.IOException;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
-@Service
-@RequiredArgsConstructor
-@Slf4j
-public class MessageClientService {
+@Entity
+@Table(name = "inbound_message",
+        indexes = {
+                @Index(name = "inbound_message_index_status", columnList = "status"),
+                @Index(name = "inbound_message_index_sha3_checksum", columnList = "sha3_checksum")
+        })
+@NoArgsConstructor
+@Getter
+@Setter
+public class InboundMessage {
 
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "inbound_message_sequence_generator")
+    @SequenceGenerator(name = "inbound_message_sequence_generator", sequenceName = "inbound_message_sequence", allocationSize = 1)
+    private Long id;
 
-    @Value("${flx.api.messages-parser.api-url}")
-    private String messagesParserApiUrl;
+    @Lob
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
+    private String content;
 
-    public ResponseEntity<CanonicalMessage> parseMessage(MessageToParseRequest message) {
-        try {
-            return restTemplate.postForEntity(messagesParserApiUrl, message, CanonicalMessage.class);
-        } catch (HttpStatusCodeException e) {
-            throw extractAndThrowProblemDetail(e);
-        } catch (Exception e) {
-            log.error("Unexpected error while calling the message parser API", e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to process the request", e);
-        }
-    }
+    @Column(name = "sha3_checksum", length = 100)
+    private String sha3Checksum;
 
-    private ResponseStatusException extractAndThrowProblemDetail(HttpStatusCodeException e) {
-        try {
-            // Récupérer le CustomProblemDetail depuis la réponse JSON
-            CustomProblemDetail problemDetail = objectMapper.readValue(e.getResponseBodyAsString(), CustomProblemDetail.class);
-            log.error("Propagating API error: {}", problemDetail);
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status")
+    private MessageStatus status;
 
-            return new ResponseStatusException(
-                HttpStatus.valueOf(problemDetail.getStatus()), 
-                problemDetail.getMessage(), 
-                e
-            );
-        } catch (IOException ex) {
-            log.error("Failed to parse error response into CustomProblemDetail", ex);
-            return new ResponseStatusException(
-                HttpStatus.INTERNAL_SERVER_ERROR, 
-                "Unexpected error format from API", 
-                ex
-            );
-        }
+    @OneToOne(mappedBy = "inboundMessage", cascade = CascadeType.ALL, orphanRemoval = true)
+    private CanonicalMessage canonicalMessage;
+
+    public void setCanonicalMessage(CanonicalMessage canonicalMessage) {
+        this.canonicalMessage = canonicalMessage;
+        canonicalMessage.setInboundMessage(this); // Assurer la synchronisation bidirectionnelle
     }
 }
+
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import java.math.BigDecimal;
+
+@Entity
+@Table(name = "canonical_message")
+@NoArgsConstructor
+@Getter
+@Setter
+public class CanonicalMessage {
+
+    @Id
+    private Long id; // L'ID est le même que celui de InboundMessage
+
+    @MapsId // Utiliser l'ID de InboundMessage comme ID de CanonicalMessage
+    @OneToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "inbound_message_id", foreignKey = @ForeignKey(name = "canonical_message_inbound_message_fk"))
+    private InboundMessage inboundMessage;
+
+    @Column(name = "sender_bic", length = 11)
+    private String senderBic;
+
+    @Column(name = "message_type")
+    private String messageType;
+
+    @Column(name = "receiver_bic", length = 11)
+    private String receiverBic;
+
+    @Column(name = "mur")
+    private String mur;
+
+    @Column(name = "trn")
+    private String trn;
+
+    @Column(name = "utr")
+    private String utr;
+
+    @Column(name = "scope")
+    private String scope;
+
+    @Column(name = "amount")
+    private BigDecimal amount;
+}
+
