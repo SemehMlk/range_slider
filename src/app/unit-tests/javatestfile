@@ -1,2 +1,8 @@
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
+<changeSet author="MAH80-DEV-TEAN" id="set_inbound_message_id_as_primary_key">
+    <comment>Set inbound_message_id as primary key</comment>
+    <addPrimaryKey 
+        tableName="canonical_message"
+        columnNames="inbound_message_id"
+        constraintName="pk_canonical_message"
+    />
+</changeSet>
