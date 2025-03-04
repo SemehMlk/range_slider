@@ -25,66 +25,18 @@ public class InboundMessage {
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     private String content;
 
-    @Column(name = "sha3_checksum", length = 100)
-    private String sha3Checksum;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status")
-    private MessageStatus status;
-
     @OneToOne(mappedBy = "inboundMessage", cascade = CascadeType.ALL, orphanRemoval = true)
     private CanonicalMessage canonicalMessage;
 
     public void setCanonicalMessage(CanonicalMessage canonicalMessage) {
         this.canonicalMessage = canonicalMessage;
-        canonicalMessage.setInboundMessage(this); // Assurer la synchronisation bidirectionnelle
+        canonicalMessage.setInboundMessage(this); // Assurer la relation bidirectionnelle
+    }
+
+    @PrePersist
+    private void assignCanonicalMessageId() {
+        if (canonicalMessage != null) {
+            canonicalMessage.setId(this.id); // Assigner l'ID avant l'insertion
+        }
     }
 }
-
-
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import java.math.BigDecimal;
-
-@Entity
-@Table(name = "canonical_message")
-@NoArgsConstructor
-@Getter
-@Setter
-public class CanonicalMessage {
-
-    @Id
-    private Long id; // L'ID est le même que celui de InboundMessage
-
-    @MapsId // Utiliser l'ID de InboundMessage comme ID de CanonicalMessage
-    @OneToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "inbound_message_id", foreignKey = @ForeignKey(name = "canonical_message_inbound_message_fk"))
-    private InboundMessage inboundMessage;
-
-    @Column(name = "sender_bic", length = 11)
-    private String senderBic;
-
-    @Column(name = "message_type")
-    private String messageType;
-
-    @Column(name = "receiver_bic", length = 11)
-    private String receiverBic;
-
-    @Column(name = "mur")
-    private String mur;
-
-    @Column(name = "trn")
-    private String trn;
-
-    @Column(name = "utr")
-    private String utr;
-
-    @Column(name = "scope")
-    private String scope;
-
-    @Column(name = "amount")
-    private BigDecimal amount;
-}
-
