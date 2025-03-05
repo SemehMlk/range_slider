@@ -5,28 +5,36 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
 import java.net.http.HttpClient;
+import java.time.Duration;
 
-public RestClient createInsecureRestClient() {
-    try {
-        TrustManager[] trustAllCertificates = new TrustManager[]{
-            new X509TrustManager() {
-                public X509Certificate[] getAcceptedIssuers() { return null; }
-                public void checkClientTrusted(X509Certificate[] certs, String authType) {}
-                public void checkServerTrusted(X509Certificate[] certs, String authType) {}
-            }
-        };
+public class RestClientFactory {
 
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(null, trustAllCertificates, new java.security.SecureRandom());
+    public static RestClient createInsecureRestClient() {
+        try {
+            // Désactiver la vérification SSL
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, new TrustManager[]{new InsecureTrustManager()}, new java.security.SecureRandom());
 
-        HttpClient insecureHttpClient = HttpClient.newBuilder()
-            .sslContext(sslContext)
-            .build();
+            HttpClient insecureHttpClient = HttpClient.newBuilder()
+                .sslContext(sslContext)
+                .connectTimeout(Duration.ofSeconds(10))  // Timeout optionnel
+                .build();
 
-        return RestClient.builder()
-            .requestFactory(clientHttpConnector -> new JdkClientHttpRequestFactory(insecureHttpClient))
-            .build();
-    } catch (NoSuchAlgorithmException | KeyManagementException e) {
-        throw new RuntimeException("Failed to create insecure RestClient", e);
+            return RestClient.builder()
+                .requestFactory(new JdkClientHttpRequestFactory(insecureHttpClient))
+                .build();
+        } catch (NoSuchAlgorithmException | KeyManagementException e) {
+            throw new RuntimeException("Erreur lors de la création du RestClient sans vérification SSL", e);
+        }
+    }
+
+    // Classe pour ignorer les certificats SSL
+    private static class InsecureTrustManager implements X509TrustManager {
+        @Override
+        public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+        @Override
+        public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+        @Override
+        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
     }
 }
