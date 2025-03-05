@@ -1,40 +1,33 @@
-import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.json.JSONObject;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
-import javax.net.ssl.*;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.X509Certificate;
-import java.net.http.HttpClient;
-import java.time.Duration;
 
-public class RestClientFactory {
+public class TokenService {
 
-    public static RestClient createInsecureRestClient() {
-        try {
-            // Désactiver la vérification SSL
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, new TrustManager[]{new InsecureTrustManager()}, new java.security.SecureRandom());
+    public static void main(String[] args) {
+        RestClient restClient = RestClientFactory.createInsecureRestClient();
 
-            HttpClient insecureHttpClient = HttpClient.newBuilder()
-                .sslContext(sslContext)
-                .connectTimeout(Duration.ofSeconds(10))  // Timeout optionnel
-                .build();
+        ResponseEntity<String> response = restClient.post()
+            .uri("https://api.example.com/token")
+            .header("Authorization", "Basic xxxxxx")
+            .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+            .body("grant_type=client_credentials")
+            .retrieve()
+            .toEntity(String.class);
 
-            return RestClient.builder()
-                .requestFactory(new JdkClientHttpRequestFactory(insecureHttpClient))
-                .build();
-        } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            throw new RuntimeException("Erreur lors de la création du RestClient sans vérification SSL", e);
+        if (response.getStatusCode().is2xxSuccessful()) {
+            // Transformer la réponse en objet JSON
+            JSONObject jsonObject = new JSONObject(response.getBody());
+
+            // Extraire des valeurs du JSON
+            String accessToken = jsonObject.getString("access_token");
+            int expiresIn = jsonObject.getInt("expires_in");
+
+            System.out.println("Token : " + accessToken);
+            System.out.println("Expire dans : " + expiresIn + " secondes");
+        } else {
+            System.out.println("Erreur HTTP : " + response.getStatusCodeValue());
         }
-    }
-
-    // Classe pour ignorer les certificats SSL
-    private static class InsecureTrustManager implements X509TrustManager {
-        @Override
-        public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-        @Override
-        public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-        @Override
-        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
     }
 }
