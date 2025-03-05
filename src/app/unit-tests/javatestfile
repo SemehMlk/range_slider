@@ -1,8 +1,23 @@
-<changeSet author="MAH80-DEV-TEAN" id="set_inbound_message_id_as_primary_key">
-    <comment>Set inbound_message_id as primary key</comment>
-    <addPrimaryKey 
-        tableName="canonical_message"
-        columnNames="inbound_message_id"
-        constraintName="pk_canonical_message"
-    />
-</changeSet>
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.8.xsd">
+
+    <changeSet id="remove-id-add-primary-key" author="your_name">
+        
+        <!-- 1️⃣ Suppression de l'ancienne PRIMARY KEY (id) -->
+        <dropPrimaryKey tableName="canonical_message"/>
+
+        <!-- 2️⃣ Suppression de la colonne `id` -->
+        <dropColumn tableName="canonical_message">
+            <column name="id"/>
+        </dropColumn>
+
+        <!-- 3️⃣ Ajout de la nouvelle PRIMARY KEY sur `inbound_message_id` -->
+        <addPrimaryKey columnNames="inbound_message_id" tableName="canonical_message" constraintName="pk_canonical_message"/>
+
+    </changeSet>
+
+</databaseChangeLog>
