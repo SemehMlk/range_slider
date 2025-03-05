@@ -1,54 +1,33 @@
+import javax.net.ssl.*;
+import java.security.cert.X509Certificate;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import reactor.netty.http.client.HttpClient;
 import org.springframework.web.client.RestClient;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.json.JSONObject;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.Date;
+import io.netty.handler.ssl.SslContextBuilder;
 
-public String getAccessToken(ApiConfigProperties apiConfigProperties) {
+public RestClient createInsecureRestClient() {
     try {
-        // Construction des credentials en Base64
-        String base64Credentials = Base64.getEncoder().encodeToString(
-            (apiConfigProperties.getClientId() + ":" + apiConfigProperties.getClientSecret()).getBytes(StandardCharsets.UTF_8)
-        );
+        // Crée un TrustManager qui ignore toutes les vérifications de certificat
+        TrustManager[] trustAllCertificates = new TrustManager[]{
+            new X509TrustManager() {
+                public X509Certificate[] getAcceptedIssuers() { return null; }
+                public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+            }
+        };
 
-        // Construction des headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", "Basic " + base64Credentials);
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        // Désactive la validation SSL
+        SslContext sslContext = SslContextBuilder.forClient()
+            .trustManager(trustAllCertificates)
+            .build();
 
-        // Corps de la requête
-        String requestBody = "grant_type=client_credentials";
+        HttpClient httpClient = HttpClient.create()
+            .secure(sslSpec -> sslSpec.sslContext(sslContext));
 
-        // Création du RestClient
-        RestClient restClient = RestClient.create();
-
-        // Exécution de la requête
-        ResponseEntity<String> response = restClient.post()
-            .uri(apiConfigProperties.getAccessTokenUri())
-            .headers(httpHeaders -> httpHeaders.addAll(headers))
-            .body(requestBody)
-            .retrieve()
-            .toEntity(String.class);
-
-        // Vérification du statut HTTP
-        if (response.getStatusCode() != HttpStatus.OK) {
-            throw new TokenHandlingException("Error retrieving token: HTTP " + response.getStatusCodeValue());
-        }
-
-        // Parsing de la réponse JSON
-        JSONObject jsonObject = new JSONObject(response.getBody());
-        String accessToken = jsonObject.getString("access_token");
-        expiresTokenAt = DateUtils.addSeconds(new Date(), jsonObject.getInt("expires_in"));
-
-        log.info("Récupération du token avec succès {}", accessToken);
-        return accessToken;
-
+        return RestClient.builder()
+            .requestFactory(clientHttpConnector -> new ReactorClientHttpConnector(httpClient))
+            .build();
     } catch (Exception e) {
-        log.error("Une erreur s'est produite lors de la récupération du token", e);
-        throw new TokenHandlingException(e.getMessage());
+        throw new RuntimeException("Failed to create insecure RestClient", e);
     }
 }
