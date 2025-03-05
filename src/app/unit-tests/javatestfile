@@ -1,13 +1,13 @@
-import javax.net.ssl.*;
-import java.security.cert.X509Certificate;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import reactor.netty.http.client.HttpClient;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
-import io.netty.handler.ssl.SslContextBuilder;
+import javax.net.ssl.*;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
+import java.net.http.HttpClient;
 
 public RestClient createInsecureRestClient() {
     try {
-        // Crée un TrustManager qui ignore toutes les vérifications de certificat
         TrustManager[] trustAllCertificates = new TrustManager[]{
             new X509TrustManager() {
                 public X509Certificate[] getAcceptedIssuers() { return null; }
@@ -16,18 +16,17 @@ public RestClient createInsecureRestClient() {
             }
         };
 
-        // Désactive la validation SSL
-        SslContext sslContext = SslContextBuilder.forClient()
-            .trustManager(trustAllCertificates)
-            .build();
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(null, trustAllCertificates, new java.security.SecureRandom());
 
-        HttpClient httpClient = HttpClient.create()
-            .secure(sslSpec -> sslSpec.sslContext(sslContext));
+        HttpClient insecureHttpClient = HttpClient.newBuilder()
+            .sslContext(sslContext)
+            .build();
 
         return RestClient.builder()
-            .requestFactory(clientHttpConnector -> new ReactorClientHttpConnector(httpClient))
+            .requestFactory(clientHttpConnector -> new JdkClientHttpRequestFactory(insecureHttpClient))
             .build();
-    } catch (Exception e) {
+    } catch (NoSuchAlgorithmException | KeyManagementException e) {
         throw new RuntimeException("Failed to create insecure RestClient", e);
     }
 }
