@@ -1,15 +1,54 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.8.xsd">
+import org.springframework.web.client.RestClient;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.json.JSONObject;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Date;
 
-    <changeSet id="update-spring-application-name" author="your_name">
-        <update tableName="properties">
-            <column name="value" value="nouvelle_valeur"/>
-            <where>key = 'spring.application.name' AND profile = 'parser_router'</where>
-        </update>
-    </changeSet>
+public String getAccessToken(ApiConfigProperties apiConfigProperties) {
+    try {
+        // Construction des credentials en Base64
+        String base64Credentials = Base64.getEncoder().encodeToString(
+            (apiConfigProperties.getClientId() + ":" + apiConfigProperties.getClientSecret()).getBytes(StandardCharsets.UTF_8)
+        );
 
-</databaseChangeLog>
+        // Construction des headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Basic " + base64Credentials);
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        // Corps de la requête
+        String requestBody = "grant_type=client_credentials";
+
+        // Création du RestClient
+        RestClient restClient = RestClient.create();
+
+        // Exécution de la requête
+        ResponseEntity<String> response = restClient.post()
+            .uri(apiConfigProperties.getAccessTokenUri())
+            .headers(httpHeaders -> httpHeaders.addAll(headers))
+            .body(requestBody)
+            .retrieve()
+            .toEntity(String.class);
+
+        // Vérification du statut HTTP
+        if (response.getStatusCode() != HttpStatus.OK) {
+            throw new TokenHandlingException("Error retrieving token: HTTP " + response.getStatusCodeValue());
+        }
+
+        // Parsing de la réponse JSON
+        JSONObject jsonObject = new JSONObject(response.getBody());
+        String accessToken = jsonObject.getString("access_token");
+        expiresTokenAt = DateUtils.addSeconds(new Date(), jsonObject.getInt("expires_in"));
+
+        log.info("Récupération du token avec succès {}", accessToken);
+        return accessToken;
+
+    } catch (Exception e) {
+        log.error("Une erreur s'est produite lors de la récupération du token", e);
+        throw new TokenHandlingException(e.getMessage());
+    }
+}
