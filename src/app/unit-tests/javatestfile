@@ -13,3 +13,13 @@
         </dependency>
     </dependencies>
 </dependencyManagement>
+
+<mirrors>
+    <mirror>
+        <id>mon-repo-mirror</id>
+        <mirrorOf>com.example:ma-dependance</mirrorOf>
+        <url>https://mon-repository.com/maven</url>
+        <layout>default</layout>
+    </mirror>
+</mirrors>
+
