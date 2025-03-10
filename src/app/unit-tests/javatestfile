@@ -1,25 +1,79 @@
-<dependencyManagement>
-    <dependencies>
-        <dependency>
-            <groupId>com.example</groupId>
-            <artifactId>ma-dependance</artifactId>
-            <version>1.0.0</version>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
+          http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+    <!-- ✅ Configurer les serveurs avec authentification -->
+    <servers>
+        <server>
+            <id>flx-releases</id>
+            <username>${MAVEN_USERNAME}</username>
+            <password>${MAVEN_PASSWORD}</password>
+        </server>
+    </servers>
+
+    <!-- ✅ Définir les mirrors pour éviter le blocage -->
+    <mirrors>
+        <!-- Mirror Maven Central -->
+        <mirror>
+            <id>central-mirror</id>
+            <mirrorOf>central</mirrorOf>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <layout>default</layout>
+        </mirror>
+
+        <!-- Mirror pour flx-releases (ton repository privé) -->
+        <mirror>
+            <id>flx-mirror</id>
+            <mirrorOf>flx-releases</mirrorOf>
+            <url>https://mon-repository.com/repository/releases/</url>
+            <layout>default</layout>
+        </mirror>
+
+        <!-- Mirror par défaut pour éviter le blocage global -->
+        <mirror>
+            <id>default-mirror</id>
+            <mirrorOf>*,!flx-releases</mirrorOf>
+            <url>https://repo.maven.apache.org/maven2</url>
+            <layout>default</layout>
+        </mirror>
+    </mirrors>
+
+    <!-- ✅ Configuration des repositories et plugins -->
+    <profiles>
+        <profile>
+            <id>ci-cd</id>
             <repositories>
                 <repository>
-                    <id>mon-repository</id>
-                    <url>https://mon-repository.com/maven</url>
+                    <id>flx-releases</id>
+                    <url>https://mon-repository.com/repository/releases/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                        <updatePolicy>always</updatePolicy>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
                 </repository>
             </repositories>
-        </dependency>
-    </dependencies>
-</dependencyManagement>
 
-<mirrors>
-    <mirror>
-        <id>mon-repo-mirror</id>
-        <mirrorOf>com.example:ma-dependance</mirrorOf>
-        <url>https://mon-repository.com/maven</url>
-        <layout>default</layout>
-    </mirror>
-</mirrors>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>flx-releases</id>
+                    <url>https://mon-repository.com/repository/releases/</url>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
 
+    <activeProfiles>
+        <activeProfile>ci-cd</activeProfile>
+    </activeProfiles>
+
+</settings>
