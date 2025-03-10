@@ -1,68 +1,15 @@
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-public class TokenResponse {
-
-    @JsonProperty("access_token")
-    private String accessToken;
-
-    @JsonProperty("expires_in")
-    private int expiresIn;
-
-    // Getters et setters
-    public String getAccessToken() {
-        return accessToken;
-    }
-
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
-    }
-
-    public int getExpiresIn() {
-        return expiresIn;
-    }
-
-    public void setExpiresIn(int expiresIn) {
-        this.expiresIn = expiresIn;
-    }
-
-    @Override
-    public String toString() {
-        return "TokenResponse{accessToken='" + accessToken + "', expiresIn=" + expiresIn + "}";
-    }
-}
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.MediaType;
-import org.springframework.web.client.RestClient;
-
-public class TokenService {
-
-    public static void main(String[] args) {
-        try {
-            RestClient restClient = RestClientFactory.createInsecureRestClient();
-
-            ResponseEntity<String> response = restClient.post()
-                .uri("https://api.example.com/token")
-                .header("Authorization", "Basic xxxxxx")
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body("grant_type=client_credentials")
-                .retrieve()
-                .toEntity(String.class);
-
-            if (response.getStatusCode().is2xxSuccessful()) {
-                // Utiliser Jackson pour convertir la réponse JSON en objet Java
-                ObjectMapper objectMapper = new ObjectMapper();
-                TokenResponse tokenResponse = objectMapper.readValue(response.getBody(), TokenResponse.class);
-
-                System.out.println("Token : " + tokenResponse.getAccessToken());
-                System.out.println("Expire dans : " + tokenResponse.getExpiresIn() + " secondes");
-            } else {
-                System.out.println("Erreur HTTP : " + response.getStatusCodeValue());
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-}
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>com.example</groupId>
+            <artifactId>ma-dependance</artifactId>
+            <version>1.0.0</version>
+            <repositories>
+                <repository>
+                    <id>mon-repository</id>
+                    <url>https://mon-repository.com/maven</url>
+                </repository>
+            </repositories>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
