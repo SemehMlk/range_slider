@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { ColDef, ColumnApi, GridApi, ColumnState } from 'ag-grid-community';
+import { ColDef, GridApi, ColumnState } from 'ag-grid-enterprise';
 
 @Component({
   selector: 'app-my-grid',
@@ -8,9 +8,8 @@ import { ColDef, ColumnApi, GridApi, ColumnState } from 'ag-grid-community';
   styleUrls: ['./my-grid.component.scss']
 })
 export class MyGridComponent implements OnInit {
-  columnDefs: ColDef[] = []; // Typage des colonnes
+  columnDefs: ColDef[] = []; // Définition typée des colonnes
   gridApi!: GridApi;
-  gridColumnApi!: ColumnApi;
   columnState: ColumnState[] | null = null; // État des colonnes sauvegardé
 
   constructor(private translateService: TranslateService) {}
@@ -24,7 +23,7 @@ export class MyGridComponent implements OnInit {
     });
   }
 
-  // Fonction pour générer les colonnes avec traduction
+  // Fonction qui génère les colonnes avec traduction
   private getColumnDefs(): ColDef[] {
     return [
       { field: 'id', headerName: this.translateService.instant('TABLE.ID') },
@@ -34,19 +33,18 @@ export class MyGridComponent implements OnInit {
     ];
   }
 
-  // Initialiser les colonnes
+  // Initialisation des colonnes
   private initColumns(): void {
     this.columnDefs = this.getColumnDefs();
   }
 
   // Méthode appelée lorsque la grille est prête
-  onGridReady(params: { api: GridApi; columnApi: ColumnApi }): void {
+  onGridReady(params: { api: GridApi }): void {
     this.gridApi = params.api;
-    this.gridColumnApi = params.columnApi;
 
     // Appliquer l'état des colonnes si existant
     if (this.columnState) {
-      this.gridColumnApi.applyColumnState({
+      this.gridApi.applyColumnState({
         state: this.columnState,
         applyOrder: true
       });
@@ -55,20 +53,20 @@ export class MyGridComponent implements OnInit {
 
   // Sauvegarder l'état des colonnes avant rafraîchissement
   private saveColumnState(): void {
-    if (this.gridColumnApi) {
-      this.columnState = this.gridColumnApi.getColumnState();
+    if (this.gridApi) {
+      this.columnState = this.gridApi.getColumnState();
     }
   }
 
-  // Rafraîchir les colonnes sans perdre leur état actuel
+  // Rafraîchir les colonnes sans perdre l’état actuel
   refreshColumns(): void {
     this.saveColumnState(); // Sauvegarde l’état actuel des colonnes
     this.columnDefs = this.getColumnDefs(); // Recharge avec les nouvelles traductions
 
     // Appliquer l'état après un court délai
     setTimeout(() => {
-      if (this.gridColumnApi && this.columnState) {
-        this.gridColumnApi.applyColumnState({
+      if (this.gridApi && this.columnState) {
+        this.gridApi.applyColumnState({
           state: this.columnState,
           applyOrder: true
         });
