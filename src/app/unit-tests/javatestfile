@@ -1,8 +1,12 @@
+import { TranslateService } from '@ngx-translate/core';
+
+constructor(private translateService: TranslateService) {}
+
 columnDefsFunction = () => [
-  { field: 'id', headerName: 'ID' },
-  { field: 'name', headerName: 'Nom' },
-  { field: 'email', headerName: 'Email', hide: true },
-  { field: 'phone', headerName: 'Téléphone', hide: true }
+  { field: 'id', headerName: this.translateService.instant('TABLE.ID') },
+  { field: 'name', headerName: this.translateService.instant('TABLE.NAME') },
+  { field: 'email', headerName: this.translateService.instant('TABLE.EMAIL'), hide: true },
+  { field: 'phone', headerName: this.translateService.instant('TABLE.PHONE'), hide: true }
 ];
 
 columnDefs = this.columnDefsFunction(); // Initialisation des colonnes
@@ -15,7 +19,7 @@ onGridReady(params) {
   this.gridApi = params.api;
   this.gridColumnApi = params.columnApi;
 
-  // Si un état précédent existe, on le réapplique
+  // Appliquer l'état sauvegardé si existant
   if (this.columnState) {
     this.gridColumnApi.applyColumnState({
       state: this.columnState,
@@ -24,19 +28,27 @@ onGridReady(params) {
   }
 }
 
-// Sauvegarder l'état des colonnes avant de recharger colDef
+// Sauvegarde l’état des colonnes avant rafraîchissement
 saveColumnState() {
   this.columnState = this.gridColumnApi.getColumnState();
 }
 
-// Rafraîchir les colonnes en gardant leur état actuel
+// Rafraîchir la grille en conservant l’état des colonnes
 refreshColumns() {
-  this.saveColumnState();  // Sauvegarde l’état avant de rafraîchir
-  this.columnDefs = this.columnDefsFunction(); // Recharge les colonnes
+  this.saveColumnState();  // Sauvegarde l’état des colonnes avant mise à jour
+  this.columnDefs = this.columnDefsFunction(); // Recharge les colonnes avec les nouvelles traductions
+
   setTimeout(() => {
     this.gridColumnApi.applyColumnState({
       state: this.columnState,
       applyOrder: true
     });
-  }, 100); // Petit délai pour s'assurer que la grille a été mise à jour
+  }, 100);
+}
+
+// Écouter le changement de langue et mettre à jour les colonnes
+ngOnInit() {
+  this.translateService.onLangChange.subscribe(() => {
+    this.refreshColumns();
+  });
 }
