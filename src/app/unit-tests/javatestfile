@@ -1,9 +1,22 @@
-<mirrors>
-    <!-- Mirror spécifique pour cib-flx-releases -->
-    <mirror>
-        <id>cib-flx-mirror</id>
-        <mirrorOf>cib-flx-releases</mirrorOf>
-        <url>http://calinex.ca.cib:8081/nexus/content/repositories/cib-flx-releases</url>
-        <layout>default</layout>
-    </mirror>
-</mirrors>
+Subject: Request for New Project Creation – Rule Grammar
+
+Dear [Software Factory Team],
+
+I hope this email finds you well.
+
+I would like to request the creation of a new project under the Samba group. Below are the project details:
+
+Project Name: Rule Grammar
+
+Group: Samba
+
+
+Please let me know if you need any additional information to proceed.
+
+Thank you in advance for your support.
+
+Best regards,
+[Your Name]
+[Your Position]
+[Your Company]
+
