@@ -1,16 +1,42 @@
-Voici un email court et professionnel pour confirmer et remercier :
+columnDefsFunction = () => [
+  { field: 'id', headerName: 'ID' },
+  { field: 'name', headerName: 'Nom' },
+  { field: 'email', headerName: 'Email', hide: true },
+  { field: 'phone', headerName: 'Téléphone', hide: true }
+];
 
+columnDefs = this.columnDefsFunction(); // Initialisation des colonnes
 
----
+gridApi;
+gridColumnApi;
+columnState = null; // Stockage de l'état des colonnes
 
-Subject: RE: Request for New Project Creation – Rule Grammar
+onGridReady(params) {
+  this.gridApi = params.api;
+  this.gridColumnApi = params.columnApi;
 
-Dear [Software Factory Support],
+  // Si un état précédent existe, on le réapplique
+  if (this.columnState) {
+    this.gridColumnApi.applyColumnState({
+      state: this.columnState,
+      applyOrder: true
+    });
+  }
+}
 
-Thank you for creating the project. I confirm that it has been successfully set up.
+// Sauvegarder l'état des colonnes avant de recharger colDef
+saveColumnState() {
+  this.columnState = this.gridColumnApi.getColumnState();
+}
 
-I appreciate your quick support.
-
-Best regards,
-[Your Name]
-
+// Rafraîchir les colonnes en gardant leur état actuel
+refreshColumns() {
+  this.saveColumnState();  // Sauvegarde l’état avant de rafraîchir
+  this.columnDefs = this.columnDefsFunction(); // Recharge les colonnes
+  setTimeout(() => {
+    this.gridColumnApi.applyColumnState({
+      state: this.columnState,
+      applyOrder: true
+    });
+  }, 100); // Petit délai pour s'assurer que la grille a été mise à jour
+}
