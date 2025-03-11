@@ -1,54 +1,78 @@
+import { Component, OnInit } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { ColDef, ColumnApi, GridApi, ColumnState } from 'ag-grid-community';
 
-constructor(private translateService: TranslateService) {}
+@Component({
+  selector: 'app-my-grid',
+  templateUrl: './my-grid.component.html',
+  styleUrls: ['./my-grid.component.scss']
+})
+export class MyGridComponent implements OnInit {
+  columnDefs: ColDef[] = []; // Typage des colonnes
+  gridApi!: GridApi;
+  gridColumnApi!: ColumnApi;
+  columnState: ColumnState[] | null = null; // État des colonnes sauvegardé
 
-columnDefsFunction = () => [
-  { field: 'id', headerName: this.translateService.instant('TABLE.ID') },
-  { field: 'name', headerName: this.translateService.instant('TABLE.NAME') },
-  { field: 'email', headerName: this.translateService.instant('TABLE.EMAIL'), hide: true },
-  { field: 'phone', headerName: this.translateService.instant('TABLE.PHONE'), hide: true }
-];
+  constructor(private translateService: TranslateService) {}
 
-columnDefs = this.columnDefsFunction(); // Initialisation des colonnes
+  ngOnInit() {
+    this.initColumns();
 
-gridApi;
-gridColumnApi;
-columnState = null; // Stockage de l'état des colonnes
-
-onGridReady(params) {
-  this.gridApi = params.api;
-  this.gridColumnApi = params.columnApi;
-
-  // Appliquer l'état sauvegardé si existant
-  if (this.columnState) {
-    this.gridColumnApi.applyColumnState({
-      state: this.columnState,
-      applyOrder: true
+    // Écouter le changement de langue pour mettre à jour les colonnes
+    this.translateService.onLangChange.subscribe(() => {
+      this.refreshColumns();
     });
   }
-}
 
-// Sauvegarde l’état des colonnes avant rafraîchissement
-saveColumnState() {
-  this.columnState = this.gridColumnApi.getColumnState();
-}
+  // Fonction pour générer les colonnes avec traduction
+  private getColumnDefs(): ColDef[] {
+    return [
+      { field: 'id', headerName: this.translateService.instant('TABLE.ID') },
+      { field: 'name', headerName: this.translateService.instant('TABLE.NAME') },
+      { field: 'email', headerName: this.translateService.instant('TABLE.EMAIL'), hide: true },
+      { field: 'phone', headerName: this.translateService.instant('TABLE.PHONE'), hide: true }
+    ];
+  }
 
-// Rafraîchir la grille en conservant l’état des colonnes
-refreshColumns() {
-  this.saveColumnState();  // Sauvegarde l’état des colonnes avant mise à jour
-  this.columnDefs = this.columnDefsFunction(); // Recharge les colonnes avec les nouvelles traductions
+  // Initialiser les colonnes
+  private initColumns(): void {
+    this.columnDefs = this.getColumnDefs();
+  }
 
-  setTimeout(() => {
-    this.gridColumnApi.applyColumnState({
-      state: this.columnState,
-      applyOrder: true
-    });
-  }, 100);
-}
+  // Méthode appelée lorsque la grille est prête
+  onGridReady(params: { api: GridApi; columnApi: ColumnApi }): void {
+    this.gridApi = params.api;
+    this.gridColumnApi = params.columnApi;
 
-// Écouter le changement de langue et mettre à jour les colonnes
-ngOnInit() {
-  this.translateService.onLangChange.subscribe(() => {
-    this.refreshColumns();
-  });
+    // Appliquer l'état des colonnes si existant
+    if (this.columnState) {
+      this.gridColumnApi.applyColumnState({
+        state: this.columnState,
+        applyOrder: true
+      });
+    }
+  }
+
+  // Sauvegarder l'état des colonnes avant rafraîchissement
+  private saveColumnState(): void {
+    if (this.gridColumnApi) {
+      this.columnState = this.gridColumnApi.getColumnState();
+    }
+  }
+
+  // Rafraîchir les colonnes sans perdre leur état actuel
+  refreshColumns(): void {
+    this.saveColumnState(); // Sauvegarde l’état actuel des colonnes
+    this.columnDefs = this.getColumnDefs(); // Recharge avec les nouvelles traductions
+
+    // Appliquer l'état après un court délai
+    setTimeout(() => {
+      if (this.gridColumnApi && this.columnState) {
+        this.gridColumnApi.applyColumnState({
+          state: this.columnState,
+          applyOrder: true
+        });
+      }
+    }, 100);
+  }
 }
