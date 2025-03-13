@@ -1,66 +1,47 @@
-import { Component, computed, signal } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
-import { ColDef, GridApi, ColumnState } from 'ag-grid-enterprise';
+@Service
+@Slf4j
+@RequiredArgsConstructor
+public class MessageScopeProcessor {
 
-@Component({
-  selector: 'app-my-grid',
-  templateUrl: './my-grid.component.html',
-  styleUrls: ['./my-grid.component.scss']
-})
-export class MyGridComponent {
-  gridApi!: GridApi;
-  columnState: ColumnState[] | null = null;
+    private final ScopeRepository scopeRepository;
+    private final RuleExecutionService ruleExecutionService;
+    private final RuleCompiler ruleCompiler;
+    private final RoutingRuleValidator ruleValidator;
 
-  constructor(private translateService: TranslateService) {}
-
-  // Signal pour stocker l'état des colonnes
-  columnDefs = signal<ColDef[]>(this.getColumnDefs());
-
-  // Fonction pour générer les colonnes dynamiquement avec traduction
-  private getColumnDefs(): ColDef[] {
-    return [
-      { field: 'id', headerName: this.translateService.instant('TABLE.ID') },
-      { field: 'name', headerName: this.translateService.instant('TABLE.NAME') },
-      { field: 'email', headerName: this.translateService.instant('TABLE.EMAIL'), hide: true },
-      { field: 'phone', headerName: this.translateService.instant('TABLE.PHONE'), hide: true }
-    ];
-  }
-
-  // Méthode appelée lorsque la grille est prête
-  onGridReady(params: { api: GridApi }): void {
-    this.gridApi = params.api;
-
-    // Restaurer l'état des colonnes si disponible
-    if (this.columnState) {
-      this.gridApi.applyColumnState({
-        state: this.columnState,
-        applyOrder: true
-      });
+    public CheckRulesResult processMx(final CanonicalMessage canonicalMessage, List<RuleBean> activeRules) {
+        final MxFieldExtractor mxFieldExtractor = MxFieldExtractor.get(canonicalMessage);
+        return ruleExecutionService.applyRules(mxFieldExtractor, activeRules);
     }
-  }
+}
 
-  // Sauvegarde l'état des colonnes avant de changer les colonnes
-  private saveColumnState(): void {
-    if (this.gridApi) {
-      this.columnState = this.gridApi.getColumnState();
+
+public Scope getMessageScope(CanonicalMessage canonicalMessage) {
+    return scopeRepository.findAll().stream()
+        .filter(scope -> isMessageScope(canonicalMessage, scope))
+        .findFirst()
+        .orElse(null);
+}
+
+public Boolean isMessageScope(CanonicalMessage canonicalMessage, Scope scope) {
+    try {
+        List<RuleBean> activeRules = buildRules(scope.getCondition());
+        CheckRulesResult checkRulesResult = processMx(canonicalMessage, activeRules);
+        return Optional.ofNullable(checkRulesResult)
+            .map(CheckRulesResult::getMatchingRules)
+            .map(rules -> !rules.isEmpty())
+            .orElse(false);
+    } catch (Exception e) {
+        log.error("Error processing message scope", e);
+        return false;
     }
-  }
+}
 
-  // ⏳ Réagir aux changements de langue avec `signal`
-  ngOnInit() {
-    this.translateService.onLangChange.subscribe(() => {
-      this.saveColumnState();
-      this.columnDefs.set(this.getColumnDefs()); // Met à jour le signal avec les nouvelles traductions
 
-      // Restaurer l'état des colonnes après mise à jour
-      setTimeout(() => {
-        if (this.gridApi && this.columnState) {
-          this.gridApi.applyColumnState({
-            state: this.columnState,
-            applyOrder: true
-          });
-        }
-      }, 100);
-    });
-  }
+public List<RuleBean> buildRules(String conditions) {
+    final RuleOperation operation = ruleValidator.compileCondition(conditions).getLeft();
+    RuleBean ruleBean = RuleBean.builder()
+        .condition(conditions)
+        .compiledCondition(operation)
+        .build();
+    return Collections.singletonList(ruleBean);
 }
