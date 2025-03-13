@@ -1,34 +1,66 @@
-<dependencyManagement>
-    <dependencies>
-        <dependency>
-            <groupId>org.antlr</groupId>
-            <artifactId>antlr4-runtime</artifactId>
-            <version>4.9.3</version>
-            <scope>import</scope>
-        </dependency>
-    </dependencies>
-</dependencyManagement>
+import { Component, computed, signal } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
+import { ColDef, GridApi, ColumnState } from 'ag-grid-enterprise';
 
-<dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-jpa</artifactId>
-    <exclusions>
-        <exclusion>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-core</artifactId>
-        </exclusion>
-    </exclusions>
-</dependency>
+@Component({
+  selector: 'app-my-grid',
+  templateUrl: './my-grid.component.html',
+  styleUrls: ['./my-grid.component.scss']
+})
+export class MyGridComponent {
+  gridApi!: GridApi;
+  columnState: ColumnState[] | null = null;
 
-<!-- Réajouter Hibernate sans la version d'ANTLR -->
-<dependency>
-    <groupId>org.hibernate</groupId>
-    <artifactId>hibernate-core</artifactId>
-    <version>6.x.x</version> <!-- Mets la version que tu utilises -->
-    <exclusions>
-        <exclusion>
-            <groupId>org.antlr</groupId>
-            <artifactId>antlr-runtime</artifactId>
-        </exclusion>
-    </exclusions>
-</dependency>
+  constructor(private translateService: TranslateService) {}
+
+  // Signal pour stocker l'état des colonnes
+  columnDefs = signal<ColDef[]>(this.getColumnDefs());
+
+  // Fonction pour générer les colonnes dynamiquement avec traduction
+  private getColumnDefs(): ColDef[] {
+    return [
+      { field: 'id', headerName: this.translateService.instant('TABLE.ID') },
+      { field: 'name', headerName: this.translateService.instant('TABLE.NAME') },
+      { field: 'email', headerName: this.translateService.instant('TABLE.EMAIL'), hide: true },
+      { field: 'phone', headerName: this.translateService.instant('TABLE.PHONE'), hide: true }
+    ];
+  }
+
+  // Méthode appelée lorsque la grille est prête
+  onGridReady(params: { api: GridApi }): void {
+    this.gridApi = params.api;
+
+    // Restaurer l'état des colonnes si disponible
+    if (this.columnState) {
+      this.gridApi.applyColumnState({
+        state: this.columnState,
+        applyOrder: true
+      });
+    }
+  }
+
+  // Sauvegarde l'état des colonnes avant de changer les colonnes
+  private saveColumnState(): void {
+    if (this.gridApi) {
+      this.columnState = this.gridApi.getColumnState();
+    }
+  }
+
+  // ⏳ Réagir aux changements de langue avec `signal`
+  ngOnInit() {
+    this.translateService.onLangChange.subscribe(() => {
+      this.saveColumnState();
+      this.columnDefs.set(this.getColumnDefs()); // Met à jour le signal avec les nouvelles traductions
+
+      // Restaurer l'état des colonnes après mise à jour
+      setTimeout(() => {
+        if (this.gridApi && this.columnState) {
+          this.gridApi.applyColumnState({
+            state: this.columnState,
+            applyOrder: true
+          });
+        }
+      }, 100);
+    });
+  }
+}
