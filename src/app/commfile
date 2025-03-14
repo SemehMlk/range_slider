@@ -1,25 +1,31 @@
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.5.xsd">
+import jakarta.persistence.*;
 
-    <changeSet id="add-scope-id-to-canonical-message" author="dev">
-        <!-- Ajout de la colonne scope_id -->
-        <addColumn tableName="canonical_message">
-            <column name="scope_id" type="BIGINT">
-                <constraints nullable="true"/>
-            </column>
-        </addColumn>
+@Entity
+@Table(name = "canonical_message")
+public class CanonicalMessage {
 
-        <!-- Ajout de la contrainte de clé étrangère -->
-        <addForeignKeyConstraint
-            baseTableName="canonical_message"
-            baseColumnNames="scope_id"
-            constraintName="fk_canonical_message_scope"
-            referencedTableName="scope"
-            referencedColumnNames="id"
-            onDelete="SET NULL"/>
-    </changeSet>
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-</databaseChangeLog>
+    @ManyToOne
+    @JoinColumn(name = "scope_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_canonical_message_scope"))
+    private Scope scope;
+
+    // Getters et Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Scope getScope() {
+        return scope;
+    }
+
+    public void setScope(Scope scope) {
+        this.scope = scope;
+    }
+}
