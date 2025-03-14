@@ -1,44 +1,26 @@
 import java.util.*;
 import java.util.regex.*;
+import java.util.stream.Collectors;
 
-public class CLOProcessor {
+public class CLOExtractor {
 
-    // Étape 1 : Remplacer chaque CLO par un identifiant et stocker dans la Map
-    public static String replaceCLOs(String text, Map<String, String> cloMap) {
+    public static Map<String, String> extractCLOs(String text) {
+        Map<String, String> cloMap = new HashMap<>();
         Pattern pattern = Pattern.compile("#CLO(.*?)#");
         Matcher matcher = pattern.matcher(text);
-        int index = 1;
 
         while (matcher.find()) {
-            String cloFull = matcher.group(0);  // Exemple : #CLO12345#
-            String replacement = "REPLACEMENT_" + index; // Nouvelle valeur
-
-            cloMap.put(cloFull, replacement); // Mettre à jour la Map avec CLO -> REPLACEMENT_X
-            text = text.replace(cloFull, replacement); // Remplacer dans le texte
-            index++;
+            String cloContent = matcher.group(1).trim();
+            cloMap.put("#CLO" + cloContent + "#", cloContent);
         }
-        return text;
-    }
 
-    // Étape 2 : Restaurer les CLO originaux dans le texte
-    public static String restoreCLOs(String text, Map<String, String> cloMap) {
-        for (Map.Entry<String, String> entry : cloMap.entrySet()) {
-            text = text.replace(entry.getValue(), entry.getKey()); // Remplacer REPLACEMENT_X par CLO original
-        }
-        return text;
+        return cloMap;
     }
 
     public static void main(String[] args) {
         String sampleText = "Some text before #CLO12345# and another CLO #CLOTestData# and more #CLO999#";
-        Map<String, String> cloMap = new HashMap<>();
-
-        // Remplacement des CLO par des valeurs
-        String replacedText = replaceCLOs(sampleText, cloMap);
-        System.out.println("Text after replacing CLOs:\n" + replacedText);
-        System.out.println("\nCLO Map:\n" + cloMap);
-
-        // Restauration des CLO originaux
-        String restoredText = restoreCLOs(replacedText, cloMap);
-        System.out.println("\nText after restoring CLOs:\n" + restoredText);
+        Map<String, String> result = extractCLOs(sampleText);
+        
+        result.forEach((key, value) -> System.out.println("Key: " + key + " -> Value: " + value));
     }
 }
