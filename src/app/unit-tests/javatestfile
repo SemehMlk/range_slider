@@ -1,47 +1,15 @@
-@Service
-@Slf4j
-@RequiredArgsConstructor
-public class MessageScopeProcessor {
+Subject: Request for Modification of January CRA – Additional On-Call Day
 
-    private final ScopeRepository scopeRepository;
-    private final RuleExecutionService ruleExecutionService;
-    private final RuleCompiler ruleCompiler;
-    private final RoutingRuleValidator ruleValidator;
+Dear [Support Team/Diana Support],
 
-    public CheckRulesResult processMx(final CanonicalMessage canonicalMessage, List<RuleBean> activeRules) {
-        final MxFieldExtractor mxFieldExtractor = MxFieldExtractor.get(canonicalMessage);
-        return ruleExecutionService.applyRules(mxFieldExtractor, activeRules);
-    }
-}
+I hope you’re doing well.
 
+I would like to request a modification to my CRA for the month of January. Specifically, I need to add one additional day corresponding to an on-call duty (astreinte).
 
-public Scope getMessageScope(CanonicalMessage canonicalMessage) {
-    return scopeRepository.findAll().stream()
-        .filter(scope -> isMessageScope(canonicalMessage, scope))
-        .findFirst()
-        .orElse(null);
-}
+Could you please update my CRA accordingly? Let me know if you need any further details.
 
-public Boolean isMessageScope(CanonicalMessage canonicalMessage, Scope scope) {
-    try {
-        List<RuleBean> activeRules = buildRules(scope.getCondition());
-        CheckRulesResult checkRulesResult = processMx(canonicalMessage, activeRules);
-        return Optional.ofNullable(checkRulesResult)
-            .map(CheckRulesResult::getMatchingRules)
-            .map(rules -> !rules.isEmpty())
-            .orElse(false);
-    } catch (Exception e) {
-        log.error("Error processing message scope", e);
-        return false;
-    }
-}
+Thank you in advance for your support.
 
+Best regards,
+[Your Name]
 
-public List<RuleBean> buildRules(String conditions) {
-    final RuleOperation operation = ruleValidator.compileCondition(conditions).getLeft();
-    RuleBean ruleBean = RuleBean.builder()
-        .condition(conditions)
-        .compiledCondition(operation)
-        .build();
-    return Collections.singletonList(ruleBean);
-}
