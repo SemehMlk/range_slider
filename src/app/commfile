@@ -1,63 +1,25 @@
-import java.util.*;
-import java.util.regex.*;
-import java.util.stream.Collectors;
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.5.xsd">
 
-public class CLOProcessor {
+    <changeSet id="add-scope-id-to-canonical-message" author="dev">
+        <!-- Ajout de la colonne scope_id -->
+        <addColumn tableName="canonical_message">
+            <column name="scope_id" type="BIGINT">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
 
-    // Étape 1 : Extraire les CLOs sous forme de liste unique (sans doublons)
-    public static List<String> extractCLOs(String text) {
-        Set<String> cloSet = new HashSet<>(); // Utilisation d'un Set pour éviter les doublons
-        Pattern pattern = Pattern.compile("#CLO(.*?)#");
-        Matcher matcher = pattern.matcher(text);
+        <!-- Ajout de la contrainte de clé étrangère -->
+        <addForeignKeyConstraint
+            baseTableName="canonical_message"
+            baseColumnNames="scope_id"
+            constraintName="fk_canonical_message_scope"
+            referencedTableName="scope"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+    </changeSet>
 
-        while (matcher.find()) {
-            String cloFull = matcher.group(0); // Exemple : #CLO12345#
-            cloSet.add(cloFull); // Ajouter le CLO complet (avec #CLO...#) à la liste
-        }
-
-        return new ArrayList<>(cloSet); // Retourner une liste unique
-    }
-
-    // Étape 2 : Simuler une récupération en base de données
-    public static Map<String, String> fetchCLOValues(List<String> cloKeys) {
-        // Simulons la base de données avec un HashMap
-        Map<String, String> fakeDatabase = new HashMap<>();
-        fakeDatabase.put("12345", "ABC");
-        fakeDatabase.put("TestData", "XYZ");
-        fakeDatabase.put("999", "LMN");
-
-        // Transformer la liste de CLOs (#CLOxxx#) en IDs (xxx) pour rechercher en base
-        return cloKeys.stream()
-                .collect(Collectors.toMap(
-                        clo -> clo, // Conserver la clé sous forme #CLOxxx#
-                        clo -> {
-                            String cloId = clo.replace("#CLO", "").replace("#", ""); // Extraire l'ID
-                            return fakeDatabase.getOrDefault(cloId, clo); // Si non trouvé, garder le CLO original
-                        }
-                ));
-    }
-
-    // Étape 3 : Remplacer les CLOs dans le texte par leurs valeurs récupérées
-    public static String replaceCLOs(String text, Map<String, String> cloValues) {
-        for (Map.Entry<String, String> entry : cloValues.entrySet()) {
-            text = text.replace(entry.getKey(), entry.getValue()); // Remplacer #CLOxxx# par la valeur en base
-        }
-        return text;
-    }
-
-    public static void main(String[] args) {
-        String sampleText = "Some text before #CLO12345# and another CLO #CLOTestData# and more #CLO999# and repeated CLO #CLO12345#";
-
-        // Étape 1 : Extraction des CLOs (Liste unique avec format #CLOxxx#)
-        List<String> cloKeys = extractCLOs(sampleText);
-        System.out.println("Extracted CLOs: " + cloKeys);
-
-        // Étape 2 : Récupération des valeurs depuis la "DB"
-        Map<String, String> cloValues = fetchCLOValues(cloKeys);
-        System.out.println("Values from DB: " + cloValues);
-
-        // Étape 3 : Remplacement des CLOs dans le texte
-        String processedText = replaceCLOs(sampleText, cloValues);
-        System.out.println("\nFinal Processed Text:\n" + processedText);
-    }
-}
+</databaseChangeLog>
