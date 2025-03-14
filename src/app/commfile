@@ -11,45 +11,38 @@ public class CLOProcessor {
 
     private final CLORepository cloRepository;
 
-    // Étape 1 : Extraire les CLOs et initialiser la Map
-    public Map<String, String> extractCLOs(String text) {
-        Map<String, String> cloMap = new HashMap<>();
+    // Étape 1 : Extraire les CLOs sous forme de liste unique (sans doublons)
+    public List<String> extractCLOs(String text) {
+        Set<String> cloSet = new HashSet<>(); // Utilisation d'un Set pour éviter les doublons
         Pattern pattern = Pattern.compile("#CLO(.*?)#");
         Matcher matcher = pattern.matcher(text);
 
         while (matcher.find()) {
-            String cloFull = matcher.group(0);  // Exemple : #CLO12345#
-            String cloKey = matcher.group(1).trim(); // 12345
-            cloMap.put(cloFull, cloKey); // Clé = CLO original, Valeur = Identifiant
+            String cloKey = matcher.group(1).trim(); // Extraire uniquement l'ID sans #CLO
+            cloSet.add(cloKey); // Ajouter à la liste unique
         }
 
-        return cloMap;
+        return new ArrayList<>(cloSet); // Retourner une liste unique
     }
 
-    // Étape 2 : Récupérer **tous les CLOs** depuis la base en une seule requête
-    public void updateCLOsFromDB(Map<String, String> cloMap) {
-        List<String> cloIds = new ArrayList<>(cloMap.values()); // Extraire les identifiants des CLOs
-        
-        // Rechercher tous les CLOs en une seule requête
-        Map<String, String> dbResults = cloRepository.findByIdIn(cloIds).stream()
+    // Étape 2 : Récupérer les valeurs depuis la base de données en une seule requête
+    public Map<String, String> fetchCLOValues(List<String> cloIds) {
+        return cloRepository.findByIdIn(cloIds).stream()
             .collect(Collectors.toMap(CLOEntity::getId, CLOEntity::getValue));
-
-        // Mettre à jour les valeurs dans la Map
-        cloMap.replaceAll((cloFull, cloId) -> dbResults.getOrDefault(cloId, cloId)); // Si pas trouvé, garder l'ID
     }
 
     // Étape 3 : Remplacer les CLOs dans le texte par leurs valeurs récupérées
-    public String replaceCLOs(String text, Map<String, String> cloMap) {
-        for (Map.Entry<String, String> entry : cloMap.entrySet()) {
-            text = text.replace(entry.getKey(), entry.getValue());
+    public String replaceCLOs(String text, Map<String, String> cloValues) {
+        for (Map.Entry<String, String> entry : cloValues.entrySet()) {
+            text = text.replace("#CLO" + entry.getKey() + "#", entry.getValue());
         }
         return text;
     }
 
     // Exécution complète
     public String processText(String text) {
-        Map<String, String> cloMap = extractCLOs(text); // Extraction des CLOs
-        updateCLOsFromDB(cloMap); // Mise à jour des valeurs depuis la DB
-        return replaceCLOs(text, cloMap); // Remplacement dans le texte
+        List<String> cloIds = extractCLOs(text); // Extraction des CLOs (Liste unique)
+        Map<String, String> cloValues = fetchCLOValues(cloIds); // Récupération en DB
+        return replaceCLOs(text, cloValues); // Remplacement dans le texte
     }
 }
