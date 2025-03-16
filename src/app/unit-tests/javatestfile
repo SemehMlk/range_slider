@@ -67,3 +67,23 @@ public class CLOProcessor {
     // Optionnel : Une version optimisée qui retourne directement un Map
     @Query("SELECT c.key, c.value FROM CLOEntity c WHERE c.key IN :keys")
     List<Object[]> findValuesByKeys(@Param("keys") List<String> keys);
+
+package com.example.util;
+
+import java.util.List;
+import com.example.model.JmsProperty;
+
+public class JmsPropertyUtil {
+
+    public static String getPropertyValue(List<JmsProperty> properties, String propertyName) {
+        if (properties == null || propertyName == null) {
+            return null;
+        }
+        return properties.stream()
+                .filter(prop -> propertyName.equals(prop.getPropertyName()))
+                .map(JmsProperty::getPropertyValue)
+                .findFirst()
+                .orElse(null);
+    }
+}
+
