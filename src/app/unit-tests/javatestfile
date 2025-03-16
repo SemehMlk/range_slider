@@ -60,3 +60,10 @@ public class CLOProcessor {
         return replaceCLOs(text, cloValues); // Étape 3 : Remplacement dans le texte
     }
 }
+
+
+   List<CLOEntity> findByKeyIn(List<String> keys);
+
+    // Optionnel : Une version optimisée qui retourne directement un Map
+    @Query("SELECT c.key, c.value FROM CLOEntity c WHERE c.key IN :keys")
+    List<Object[]> findValuesByKeys(@Param("keys") List<String> keys);
