@@ -87,3 +87,28 @@ public class JmsPropertyUtil {
     }
 }
 
+public Map<String, List<String>> fetchCLOValues(List<String> cloKeys) {
+    // Supprimer les # pour obtenir les vrais keys
+    List<String> keys = cloKeys.stream()
+            .map(clo -> clo.replace("#", "")) // Supprime les #
+            .collect(Collectors.toList());
+
+    // Récupérer les valeurs en base
+    List<CLOEntity> cloEntities = cloRepository.findByKeyIn(keys);
+
+    // Transformer les résultats en une Map (Key -> Liste de valeurs)
+    Map<String, List<String>> resultMap = cloEntities.stream()
+            .collect(Collectors.groupingBy(
+                    CLOEntity::getKey, // Grouper par `key`
+                    Collectors.mapping(CLOEntity::getValue, Collectors.toList()) // Extraire uniquement `value`
+            ));
+
+    // S'assurer que toutes les clés sont présentes dans la Map, même celles sans valeurs en DB
+    for (String key : keys) {
+        resultMap.putIfAbsent(key, new ArrayList<>()); // Ajoute une liste vide si la clé est absente
+    }
+
+    return resultMap;
+}
+
+
