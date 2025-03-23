@@ -1,114 +1,43 @@
-import java.util.*;
-import java.util.regex.*;
-import java.util.stream.Collectors;
+import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
 
-import org.springframework.stereotype.Service;
-import lombok.RequiredArgsConstructor;
+@Component({
+  selector: 'flow-actions',
+  templateUrl: './flow-actions.component.html'
+})
+export class FlowActionsComponent implements OnChanges {
+  @Input() flowDetails!: {
+    state: {
+      currentState: string;
+      nextPossibleStates: any[]; // on reste proche du backend ici
+    };
+    scope: {
+      scope: string;
+      states: any[];
+    };
+  };
 
-@Service
-@RequiredArgsConstructor
-public class CLOProcessor {
+  @Output() actionTriggered = new EventEmitter<any>();
 
-    private final CLORepository cloRepository;
+  availableActions: any[] = [];
 
-    // Étape 1 : Extraire toutes les valeurs entre #...# (sans doublons)
-    public List<String> extractCLOs(String text) {
-        Set<String> cloSet = new HashSet<>(); // Utilisation d'un Set pour éviter les doublons
-        Pattern pattern = Pattern.compile("#(.*?)#"); // Nouvelle regex
-        Matcher matcher = pattern.matcher(text);
+  ngOnChanges(): void {
+    this.loadActions();
+  }
 
-        while (matcher.find()) {
-            String cloFull = matcher.group(0); // Exemple : #CLO12345#, #ABC#, #XYZ#
-            cloSet.add(cloFull); // Ajouter à la liste unique
-        }
+  loadActions(): void {
+    this.availableActions = this.flowDetails?.state?.nextPossibleStates || [];
+  }
 
-        return new ArrayList<>(cloSet); // Retourner une liste unique
-    }
-
-    // Étape 2 : Récupérer toutes les valeurs associées aux CLOs depuis la base
-    public Map<String, List<String>> fetchCLOValues(List<String> cloKeys) {
-        // Transformer la liste de #XXX# en IDs (XXX)
-        List<String> cloIds = cloKeys.stream()
-                .map(clo -> clo.replace("#", "")) // Extraire l'ID sans #
-                .collect(Collectors.toList());
-
-        // Récupérer toutes les valeurs groupées par CLO
-        List<CLOEntity> cloEntities = cloRepository.findByCloIdIn(cloIds); // Simule une requête qui retourne plusieurs valeurs
-
-        // Transformer la liste en une Map CLO -> Liste de valeurs
-        return cloEntities.stream()
-                .collect(Collectors.groupingBy(
-                        clo -> "#" + clo.getCloId() + "#", // Remettre le format #XXX#
-                        Collectors.mapping(CLOEntity::getValue, Collectors.toList())
-                ));
-    }
-
-    // Étape 3 : Remplacer les CLOs dans le texte par leurs valeurs jointes
-    public String replaceCLOs(String text, Map<String, List<String>> cloValues) {
-        for (Map.Entry<String, List<String>> entry : cloValues.entrySet()) {
-            String cloKey = entry.getKey(); // #XXX#
-            String replacement = "(" + String.join(", ", entry.getValue()) + ")"; // (val1, val2, val3)
-            text = text.replace(cloKey, replacement);
-        }
-        return text;
-    }
-
-    // Exécution complète
-    public String processText(String text) {
-        List<String> cloKeys = extractCLOs(text); // Étape 1 : Extraction des CLOs
-        Map<String, List<String>> cloValues = fetchCLOValues(cloKeys); // Étape 2 : Récupération des valeurs
-        return replaceCLOs(text, cloValues); // Étape 3 : Remplacement dans le texte
-    }
+  onActionClick(action: any): void {
+    this.actionTriggered.emit(action);
+  }
 }
 
 
-   List<CLOEntity> findByKeyIn(List<String> keys);
-
-    // Optionnel : Une version optimisée qui retourne directement un Map
-    @Query("SELECT c.key, c.value FROM CLOEntity c WHERE c.key IN :keys")
-    List<Object[]> findValuesByKeys(@Param("keys") List<String> keys);
-
-package com.example.util;
-
-import java.util.List;
-import com.example.model.JmsProperty;
-
-public class JmsPropertyUtil {
-
-    public static String getPropertyValue(List<JmsProperty> properties, String propertyName) {
-        if (properties == null || propertyName == null) {
-            return null;
-        }
-        return properties.stream()
-                .filter(prop -> propertyName.equals(prop.getPropertyName()))
-                .map(JmsProperty::getPropertyValue)
-                .findFirst()
-                .orElse(null);
-    }
-}
-
-public Map<String, List<String>> fetchCLOValues(List<String> cloKeys) {
-    // Supprimer les # pour obtenir les vrais keys
-    List<String> keys = cloKeys.stream()
-            .map(clo -> clo.replace("#", "")) // Supprime les #
-            .collect(Collectors.toList());
-
-    // Récupérer les valeurs en base
-    List<CLOEntity> cloEntities = cloRepository.findByKeyIn(keys);
-
-    // Transformer les résultats en une Map (Key -> Liste de valeurs)
-    Map<String, List<String>> resultMap = cloEntities.stream()
-            .collect(Collectors.groupingBy(
-                    CLOEntity::getKey, // Grouper par `key`
-                    Collectors.mapping(CLOEntity::getValue, Collectors.toList()) // Extraire uniquement `value`
-            ));
-
-    // S'assurer que toutes les clés sont présentes dans la Map, même celles sans valeurs en DB
-    for (String key : keys) {
-        resultMap.putIfAbsent(key, new ArrayList<>()); // Ajoute une liste vide si la clé est absente
-    }
-
-    return resultMap;
-}
-
-
+<div class="flow-actions" *ngIf="availableActions?.length">
+  <button
+    *ngFor="let action of availableActions"
+    (click)="onActionClick(action)">
+    {{ action.transitionName }}
+  </button>
+</div>
