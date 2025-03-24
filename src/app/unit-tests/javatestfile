@@ -1,43 +1,64 @@
-import { Component, Input, Output, EventEmitter, OnChanges } from '@angular/core';
+import { Injectable } from '@angular/core';
 
-@Component({
-  selector: 'flow-actions',
-  templateUrl: './flow-actions.component.html'
+@Injectable({
+  providedIn: 'root'
 })
-export class FlowActionsComponent implements OnChanges {
-  @Input() flowDetails!: {
-    state: {
-      currentState: string;
-      nextPossibleStates: any[]; // on reste proche du backend ici
-    };
-    scope: {
-      scope: string;
-      states: any[];
-    };
-  };
+export class RoleService {
+  private roles: string[] = [];
 
-  @Output() actionTriggered = new EventEmitter<any>();
-
-  availableActions: any[] = [];
-
-  ngOnChanges(): void {
-    this.loadActions();
+  constructor() {
+    const userInfos = localStorage.getItem('userInfos');
+    if (userInfos) {
+      try {
+        const parsed = JSON.parse(userInfos);
+        this.roles = parsed?.roles || [];
+      } catch (e) {
+        console.error('Erreur lors du parsing des rôles utilisateur', e);
+      }
+    }
   }
 
-  loadActions(): void {
-    this.availableActions = this.flowDetails?.state?.nextPossibleStates || [];
+  getUserRoles(): string[] {
+    return this.roles;
   }
 
-  onActionClick(action: any): void {
-    this.actionTriggered.emit(action);
+  hasAnyRole(allowedRoles: string[]): boolean {
+    if (!allowedRoles || allowedRoles.length === 0) {
+      return true; // Public
+    }
+    return allowedRoles.some(role => this.roles.includes(role));
   }
 }
 
 
-<div class="flow-actions" *ngIf="availableActions?.length">
-  <button
-    *ngFor="let action of availableActions"
-    (click)="onActionClick(action)">
-    {{ action.transitionName }}
-  </button>
-</div>
+
+import { Directive, Input, TemplateRef, ViewContainerRef } from '@angular/core';
+import { RoleService } from './role.service';
+
+@Directive({
+  selector: '[hasRole]'
+})
+export class HasRoleDirective {
+  private rolesToCheck: string[] = [];
+
+  constructor(
+    private templateRef: TemplateRef<any>,
+    private viewContainer: ViewContainerRef,
+    private roleService: RoleService
+  ) {}
+
+  @Input()
+  set hasRole(roles: string[]) {
+    this.rolesToCheck = roles;
+    this.updateView();
+  }
+
+  private updateView(): void {
+    this.viewContainer.clear();
+    if (this.roleService.hasAnyRole(this.rolesToCheck)) {
+      this.viewContainer.createEmbeddedView(this.templateRef);
+    }
+  }
+}
+
+
